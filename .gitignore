@@ -1,0 +1,24 @@
+# Environment & Secrets
+.env
+.env.local
+
+# Databases & Media
+db.sqlite3
+media/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node / React
+node_modules/
+dist/
+.vite/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
