@@ -1,26 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { loginDoctor, getSummaryDetail, patchSummaryDetail } from '../api';
+import { loginDoctor, getSummaryDetail, patchSummaryDetail, pushAbdm } from '../api';
 import { 
-  UserCheck, Lock, Search, Save, FileText, CheckCircle2, 
-  ExternalLink, Eye, AlertCircle, RefreshCw 
+  UserCheck, Save, RefreshCw, CheckCircle2, ShieldAlert, Leaf, Activity, FileText, Send 
 } from 'lucide-react';
 
 export default function DoctorCommandCenter({ activeSessionId }) {
-  // Auth State
   const [token, setToken] = useState(null);
   const [username, setUsername] = useState('doctor');
   const [password, setPassword] = useState('password123');
   const [authError, setAuthError] = useState('');
 
-  // Session & Summary State
-  const [selectedSessionId, setSelectedSessionId] = useState(activeSessionId || 1);
+  const [selectedSessionId, setSelectedSessionId] = useState(activeSessionId || 13);
+  const [mode, setMode] = useState('allopathic');
   const [summaryData, setSummaryData] = useState(null);
   const [transcripts, setTranscripts] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [clinicalFlags, setClinicalFlags] = useState([]);
+  const [consentRecords, setConsentRecords] = useState([]);
+  const [abdmLogs, setAbdmLogs] = useState([]);
   const [doctorNotes, setDoctorNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Editable Structured JSON State
   const [structuredSummary, setStructuredSummary] = useState({
     chief_complaint: { text: '', source_turns: [] },
     hpi: { text: '', source_turns: [] },
@@ -31,7 +31,6 @@ export default function DoctorCommandCenter({ activeSessionId }) {
     ros: { text: '', source_turns: [] },
   });
 
-  // Source-Linking Highlight State
   const [activeSourceTurns, setActiveSourceTurns] = useState([]);
   const [activeSourceDocs, setActiveSourceDocs] = useState([]);
   const [activeSectionKey, setActiveSectionKey] = useState(null);
@@ -39,40 +38,36 @@ export default function DoctorCommandCenter({ activeSessionId }) {
 
   const transcriptRefs = useRef({});
 
-  // Auto update selectedSessionId if activeSessionId prop changes
   useEffect(() => {
-    if (activeSessionId) {
-      setSelectedSessionId(activeSessionId);
-    }
+    if (activeSessionId) setSelectedSessionId(activeSessionId);
   }, [activeSessionId]);
 
-  // Load summary detail when token and selectedSessionId are available
   const fetchSummary = async (sid = selectedSessionId) => {
     if (!token || !sid) return;
     setIsLoading(true);
     setSaveSuccess(false);
     try {
       const data = await getSummaryDetail(sid, token);
+      setMode(data.mode || 'allopathic');
       const summaryObj = data.summary?.structured_json || {};
       setStructuredSummary(summaryObj);
       setDoctorNotes(data.summary?.doctor_notes || '');
       setTranscripts(data.transcripts || []);
       setDocuments(data.documents || []);
+      setClinicalFlags(data.clinical_flags || []);
+      setConsentRecords(data.consent_records || []);
+      setAbdmLogs(data.abdm_logs || []);
     } catch (err) {
-      console.error('Failed to fetch summary detail:', err);
-      alert(`Could not load Session #${sid}. Ensure session exists and summary is generated.`);
+      alert(`Could not load Session #${sid}. Ensure session exists.`);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token && selectedSessionId) {
-      fetchSummary(selectedSessionId);
-    }
+    if (token && selectedSessionId) fetchSummary(selectedSessionId);
   }, [token, selectedSessionId]);
 
-  // Handle Login Form Submission
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -81,13 +76,12 @@ export default function DoctorCommandCenter({ activeSessionId }) {
       const res = await loginDoctor(username, password);
       setToken(res.token);
     } catch (err) {
-      setAuthError(err.message || 'Invalid username or password.');
+      setAuthError(err.message || 'Invalid credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle Source Linking Highlight & Scroll
   const handleSelectField = (key, fieldObj) => {
     setActiveSectionKey(key);
     const turns = fieldObj.source_turns || [];
@@ -95,17 +89,13 @@ export default function DoctorCommandCenter({ activeSessionId }) {
     setActiveSourceTurns(turns);
     setActiveSourceDocs(docs);
 
-    // Scroll to the first matching transcript turn in left pane
     if (turns.length > 0) {
       const firstTurnId = turns[0];
       const el = transcriptRefs.current[firstTurnId];
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
-  // Handle Text Edit for a Summary Field
   const handleTextChange = (key, textValue) => {
     setStructuredSummary(prev => ({
       ...prev,
@@ -116,7 +106,6 @@ export default function DoctorCommandCenter({ activeSessionId }) {
     }));
   };
 
-  // Handle Save / PATCH Summary
   const handleSaveSummary = async () => {
     if (!token || !selectedSessionId) return;
     setIsLoading(true);
@@ -131,7 +120,19 @@ export default function DoctorCommandCenter({ activeSessionId }) {
     }
   };
 
-  // 1. LOGIN SCREEN
+  const handleRetryAbdmPush = async () => {
+    setIsLoading(true);
+    try {
+      await pushAbdm(selectedSessionId);
+      await fetchSummary(selectedSessionId);
+      alert('ABDM Push re-executed successfully!');
+    } catch (err) {
+      alert('Failed to push to ABDM.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!token) {
     return (
       <div className="kiosk-card" style={{ maxWidth: '450px', margin: '3rem auto' }}>
@@ -140,48 +141,35 @@ export default function DoctorCommandCenter({ activeSessionId }) {
             <UserCheck size={30} />
           </div>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem' }}>Doctor Command Center</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Clinician Review & Source-Linked Traceability
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Clinician Verification & Source-Linked Traceability
           </p>
         </div>
 
         {authError && (
-          <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.88rem' }}>
+          <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', padding: '0.75rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.88rem' }}>
             {authError}
           </div>
         )}
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label className="form-label">Doctor Username</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              value={username} 
-              onChange={e => setUsername(e.target.value)} 
-              required 
-            />
+            <label className="form-label">Username</label>
+            <input type="text" className="form-input" value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input 
-              type="password" 
-              className="form-input" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-            />
+            <input type="password" className="form-input" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
           <button type="submit" className="btn-primary" disabled={isLoading}>
-            {isLoading ? 'Authenticating...' : 'Sign In as Doctor'}
+            {isLoading ? 'Signing In...' : 'Sign In as Doctor'}
           </button>
         </form>
       </div>
     );
   }
 
-  // 2. MAIN DOCTOR COMMAND CENTER DASHBOARD
-  const summaryFields = [
+  const allopathicFields = [
     { key: 'chief_complaint', label: 'Chief Complaint' },
     { key: 'hpi', label: 'History of Present Illness (HPI)' },
     { key: 'pmh', label: 'Past Medical History (PMH)' },
@@ -191,63 +179,78 @@ export default function DoctorCommandCenter({ activeSessionId }) {
     { key: 'ros', label: 'Review of Systems (ROS)' },
   ];
 
+  const ayushFields = [
+    { key: 'prakriti_assessment', label: 'Prakriti Assessment (Constitutional Dosha)' },
+    { key: 'agni_koshtha', label: 'Agni & Koshtha (Digestive Fire & Bowel)' },
+    { key: 'ahara_vihara_habits', label: 'Ahara & Vihara (Dietary & Lifestyle)' },
+    { key: 'vikriti_patterns', label: 'Vikriti Imbalance & Dhatu Pattern' },
+  ];
+
+  const summaryFieldsToRender = mode === 'ayush' ? [...allopathicFields, ...ayushFields] : allopathicFields;
+
   return (
     <div>
-      {/* Header bar for Session Selector & Actions */}
+      {/* Top Header Controls */}
       <div style={{ background: 'var(--panel-bg)', padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--panel-border)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontWeight: 700, color: 'white' }}>Session ID:</span>
           <input 
             type="number" 
             className="form-input" 
-            style={{ width: '100px', padding: '0.4rem 0.75rem' }} 
+            style={{ width: '90px', padding: '0.4rem 0.6rem' }} 
             value={selectedSessionId} 
             onChange={e => setSelectedSessionId(Number(e.target.value))} 
           />
-          <button 
-            type="button" 
-            className="btn-primary" 
-            style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', width: 'auto' }} 
-            onClick={() => fetchSummary(selectedSessionId)}
-          >
-            <RefreshCw size={14} /> Fetch Session
+          <button type="button" className="btn-primary" style={{ padding: '0.45rem 0.9rem', width: 'auto', fontSize: '0.85rem' }} onClick={() => fetchSummary(selectedSessionId)}>
+            <RefreshCw size={14} /> Fetch
           </button>
+          <span style={{ fontSize: '0.8rem', background: mode === 'ayush' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)', color: mode === 'ayush' ? '#6ee7b7' : '#c7d2fe', padding: '4px 10px', borderRadius: '12px', fontWeight: 700 }}>
+            {mode === 'ayush' ? 'AYUSH Mode' : 'Allopathic Mode'}
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {saveSuccess && (
-            <span style={{ color: 'var(--success-text)', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ color: 'var(--success-text)', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <CheckCircle2 size={16} /> Saved & Verified
             </span>
           )}
-          <button 
-            type="button" 
-            className="btn-primary" 
-            style={{ padding: '0.5rem 1.25rem', width: 'auto', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} 
-            onClick={handleSaveSummary}
-            disabled={isLoading}
-          >
-            <Save size={16} /> {isLoading ? 'Saving...' : 'Save & Confirm Summary'}
+          <button type="button" className="btn-primary" style={{ padding: '0.5rem 1.25rem', width: 'auto', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} onClick={handleSaveSummary} disabled={isLoading}>
+            <Save size={16} /> Save Summary
           </button>
         </div>
       </div>
 
+      {/* Clinical Safety Alert Panel if flags exist */}
+      {clinicalFlags.length > 0 && (
+        <div style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
+          <div style={{ color: 'var(--warning-text)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+            <ShieldAlert size={18} /> Clinical Safety Alerts Surfaced ({clinicalFlags.length})
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            {clinicalFlags.map((flag, idx) => (
+              <div key={idx} style={{ fontSize: '0.85rem', color: 'white', background: 'rgba(15, 23, 42, 0.5)', padding: '0.6rem', borderRadius: 'var(--radius-sm)' }}>
+                {flag.flag_type === 'abnormal_value' ? (
+                  <div>⚠️ <strong>{flag.detail.test_name}:</strong> {flag.detail.value} (Ref: {flag.detail.reference_range}) — Status: <span style={{ color: '#f87171', fontWeight: 700 }}>{flag.detail.status}</span></div>
+                ) : (
+                  <div>🚫 <strong>Drug Interaction:</strong> {flag.detail.interacting_pair?.join(' + ')} — {flag.detail.description}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Two Pane Split View */}
       <div className="doctor-layout">
-        {/* LEFT PANE: Transcript turns & Document Evidence */}
+        {/* LEFT PANE: Transcript Turns & OCR Evidence */}
         <div className="doc-pane">
           <div className="pane-title">
-            <span>Patient Evidence & Transcript</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Hover summary fields to trace source turns
-            </span>
+            <span>Intake Transcript & OCR Evidence</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Click summary cards to highlight source turns</span>
           </div>
 
           <div className="scroll-content">
-            <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.75rem', fontWeight: 700 }}>
-              Full Intake Transcript ({transcripts.length} turns)
-            </h4>
-
             {transcripts.map((t) => {
               const isHighlighted = activeSourceTurns.includes(t.turn);
               return (
@@ -256,7 +259,7 @@ export default function DoctorCommandCenter({ activeSessionId }) {
                   ref={el => transcriptRefs.current[t.turn] = el}
                   className={`transcript-item ${isHighlighted ? 'highlighted' : ''}`}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                     <strong style={{ color: t.speaker === 'patient' ? '#818cf8' : '#38bdf8', fontSize: '0.82rem' }}>
                       {t.speaker === 'patient' ? 'Patient' : 'AI Assistant'}
                     </strong>
@@ -267,26 +270,21 @@ export default function DoctorCommandCenter({ activeSessionId }) {
               );
             })}
 
-            {/* Document OCR Evidence Section */}
             {documents.length > 0 && (
               <div style={{ marginTop: '1.5rem' }}>
-                <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.75rem', fontWeight: 700 }}>
+                <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.5rem', fontWeight: 700 }}>
                   Uploaded Documents ({documents.length})
                 </h4>
                 {documents.map((doc) => {
                   const isDocHighlighted = activeSourceDocs.includes(doc.id);
                   return (
-                    <div 
-                      key={doc.id}
-                      className={`transcript-item ${isDocHighlighted ? 'highlighted' : ''}`}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <strong style={{ color: 'white', fontSize: '0.85rem' }}>Doc #{doc.id} (Prescription OCR)</strong>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--success-text)' }}>Confidence: {(doc.confidence * 100).toFixed(0)}%</span>
+                    <div key={doc.id} className={`transcript-item ${isDocHighlighted ? 'highlighted' : ''}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <strong style={{ color: 'white', fontSize: '0.85rem' }}>Doc #{doc.id} ({doc.ocr_method})</strong>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--success-text)' }}>Conf: {(doc.confidence * 100).toFixed(0)}%</span>
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                        {doc.extracted_fields?.diagnosis && <div>Diagnosis: {doc.extracted_fields.diagnosis}</div>}
-                        {doc.extracted_fields?.medicines?.length > 0 && <div>Rx: {doc.extracted_fields.medicines.join(', ')}</div>}
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                        {doc.extracted_text.slice(0, 100)}...
                       </div>
                     </div>
                   );
@@ -296,17 +294,15 @@ export default function DoctorCommandCenter({ activeSessionId }) {
           </div>
         </div>
 
-        {/* RIGHT PANE: Source-Linked Structured Summary (Editable) */}
+        {/* RIGHT PANE: Source-Linked Summary (Editable) */}
         <div className="doc-pane">
           <div className="pane-title">
-            <span>Structured Clinical Summary</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
-              Click to highlight source evidence
-            </span>
+            <span>Structured Summary ({mode.toUpperCase()})</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>Click to trace source turns</span>
           </div>
 
           <div className="scroll-content">
-            {summaryFields.map(({ key, label }) => {
+            {summaryFieldsToRender.map(({ key, label }) => {
               const fieldObj = structuredSummary[key] || { text: '', source_turns: [] };
               const isActive = activeSectionKey === key;
               const sourceTurnsCount = fieldObj.source_turns?.length || 0;
@@ -321,11 +317,10 @@ export default function DoctorCommandCenter({ activeSessionId }) {
                     <span>{label}</span>
                     {sourceTurnsCount > 0 && (
                       <span className="source-tag">
-                        Traced to Turn(s): {fieldObj.source_turns.join(', ')}
+                        Source Turn(s): {fieldObj.source_turns.join(', ')}
                       </span>
                     )}
                   </div>
-
                   <textarea 
                     className="field-textarea" 
                     value={fieldObj.text || ''} 
@@ -336,16 +331,30 @@ export default function DoctorCommandCenter({ activeSessionId }) {
               );
             })}
 
-            {/* Doctor Notes Box */}
             <div className="doctor-notes-box">
-              <label className="form-label" style={{ fontSize: '0.85rem' }}>Doctor Review Notes</label>
+              <label className="form-label" style={{ fontSize: '0.85rem' }}>Clinician Notes & Verification Sign-Off</label>
               <textarea 
                 className="field-textarea" 
-                style={{ minHeight: '70px' }} 
-                placeholder="Add clinician notes or verification sign-off here..." 
+                style={{ minHeight: '60px' }} 
+                placeholder="Enter clinician notes here..." 
                 value={doctorNotes} 
                 onChange={e => setDoctorNotes(e.target.value)} 
               />
+            </div>
+
+            {/* ABDM Push Log & Retry Button */}
+            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--panel-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>ABDM FHIR Export Status</span>
+                <button type="button" className="btn-primary" style={{ padding: '0.35rem 0.8rem', width: 'auto', fontSize: '0.8rem' }} onClick={handleRetryAbdmPush}>
+                  Retry ABDM Push
+                </button>
+              </div>
+              {abdmLogs.length > 0 && (
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                  Latest Status: <strong style={{ color: 'var(--success-text)' }}>{abdmLogs[0].status.toUpperCase()}</strong> ({abdmLogs[0].attempted_at})
+                </div>
+              )}
             </div>
           </div>
         </div>
