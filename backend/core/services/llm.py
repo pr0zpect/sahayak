@@ -24,6 +24,8 @@ AYUSH_ONTOLOGY = {
 def _ask(prompt, fallback):
     try:
         client = InferenceClient(api_key=os.getenv("HF_API_KEY"))
+        # Fallback options: Qwen/Qwen2.5-7B-Instruct or meta-llama/Llama-3.2-3B-Instruct
+        # Note: Qwen3-8B-Instruct and Qwen2.5-7B-Instruct are unavailable/unsupported, using Llama-3.1-8B-Instruct for now.
         completion = client.chat.completions.create(
             model="meta-llama/Llama-3.1-8B-Instruct",
             messages=[
@@ -62,56 +64,122 @@ def get_first_question(mode="allopathic"):
 
 def get_next_question(transcript, mode="allopathic"):
     patient_answers = sum(1 for item in transcript if item.get("speaker") == "patient")
-    if patient_answers >= 5:
-        return {"question": None, "chips": [], "done": True}
-
     asked_questions = [t.get("text", "").strip().lower() for t in transcript if t.get("speaker") == "ai"]
+    
+    closing_question = "Is there anything else you'd like to add?"
+    
+    # If the last question asked was the closing question, the patient has now answered it, so we are done.
+    if asked_questions and asked_questions[-1] == closing_question.lower():
+        return {
+            "question": None,
+            "chips": [],
+            "escape_hatch": None,
+            "input_type": None,
+            "done": True,
+            "needs_clarification": False
+        }
+
+    # Hard cap of 8 patient answers. If hit, force the closing free-text turn.
+    if patient_answers >= 8:
+        return {
+            "question": closing_question,
+            "chips": [],
+            "escape_hatch": None,
+            "input_type": "freetext",
+            "done": False,
+            "needs_clarification": False
+        }
+
+    def _format_fallback(fb):
+        return {
+            "question": fb["question"],
+            "chips": fb["chips"],
+            "escape_hatch": "Something else / not sure",
+            "input_type": "options",
+            "done": False,
+            "needs_clarification": False
+        }
 
     if mode == "ayush":
         ayush_fallbacks = [
-            {"question": "How is your appetite (Agni) and bowel movement pattern (Koshtha)?", "chips": ["Regular appetite", "Irregular/Gas", "Low appetite", "Burning sensation"], "done": False},
-            {"question": "Could you describe your daily diet (Ahara), sleep pattern (Nidra), and stress levels?", "chips": ["Spicy/Oily food", "Late night sleep", "High stress", "Balanced diet"], "done": False},
-            {"question": "Do you feel sensitive to cold or heat, and how is your body energy throughout the day?", "chips": ["Sensitive to cold", "Sensitive to heat", "Low energy/Heavy", "Energetic"], "done": False},
-            {"question": "Have you noticed any swelling, joint stiffness, or skin flare-ups?", "chips": ["Joint stiffness", "Skin redness", "Body heaviness", "None"], "done": False},
+            {"question": "How is your appetite (Agni) and bowel movement pattern (Koshtha)?", "chips": ["Regular appetite", "Irregular/Gas", "Low appetite", "Burning sensation"]},
+            {"question": "Could you describe your daily diet (Ahara), sleep pattern (Nidra), and stress levels?", "chips": ["Spicy/Oily food", "Late night sleep", "High stress", "Balanced diet"]},
+            {"question": "Do you feel sensitive to cold or heat, and how is your body energy throughout the day?", "chips": ["Sensitive to cold", "Sensitive to heat", "Low energy/Heavy", "Energetic"]},
+            {"question": "Have you noticed any swelling, joint stiffness, or skin flare-ups?", "chips": ["Joint stiffness", "Skin redness", "Body heaviness", "None"]},
         ]
         fb_idx = min(patient_answers, len(ayush_fallbacks) - 1)
-        return ayush_fallbacks[fb_idx]
+        return _format_fallback(ayush_fallbacks[fb_idx])
 
     # Allopathic SOCRATES rotation
     allopathic_fallbacks = [
-        {"question": "When did this symptom start and how long has it lasted?", "chips": ["Today", "A few days ago", "More than a week"], "done": False},
-        {"question": "How would you describe the feeling, and how severe is it on a scale of 1 to 10?", "chips": ["Mild (1-3)", "Moderate (4-6)", "Severe (7-10)"], "done": False},
-        {"question": "Are you experiencing any accompanying symptoms like fever, nausea, or dizziness?", "chips": ["Fever", "Nausea", "Dizziness", "No other symptoms"], "done": False},
-        {"question": "Do you have any existing medical conditions or daily medications?", "chips": ["Diabetes", "Hypertension", "Asthma", "No prior conditions"], "done": False},
+        {"question": "When did this symptom start and how long has it lasted?", "chips": ["Today", "A few days ago", "More than a week"]},
+        {"question": "How would you describe the feeling, and how severe is it on a scale of 1 to 10?", "chips": ["Mild (1-3)", "Moderate (4-6)", "Severe (7-10)"]},
+        {"question": "Are you experiencing any accompanying symptoms like fever, nausea, or dizziness?", "chips": ["Fever", "Nausea", "Dizziness", "No other symptoms"]},
+        {"question": "Do you have any existing medical conditions or daily medications?", "chips": ["Diabetes", "Hypertension", "Asthma", "No prior conditions"]},
     ]
 
     fallback_idx = min(patient_answers, len(allopathic_fallbacks) - 1)
-    default_fallback = allopathic_fallbacks[fallback_idx]
+    default_fallback = _format_fallback(allopathic_fallbacks[fallback_idx])
 
-    result = _ask(
+    prompt = (
         f"Interview transcript so far: {json.dumps(transcript)}. "
         f"Do NOT repeat any of these previously asked questions: {json.dumps(asked_questions)}. "
-        f"If the patient's most recent answer is clearly unrelated to any medical symptom, unclear, or nonsensical "
-        f"(e.g. random letters, completely off-topic, gibberish), do NOT treat it as clinical data — "
-        f"instead generate a polite clarifying question asking the patient to restate their symptom, "
-        f"and set \"needs_clarification\": true in your response. "
-        f"Otherwise ask the single next logical SOCRATES intake question. "
-        f"If 4 or more patient answers are present and all are valid, return {{\"question\":null,\"chips\":[],\"done\":true,\"needs_clarification\":false}}; "
-        f"otherwise return {{\"question\":str,\"chips\":[str],\"done\":false,\"needs_clarification\":bool}}.",
-        default_fallback
+        f"If the patient's most recent answer is clearly unrelated to a medical symptom, unclear, or nonsensical "
+        f"(e.g. random letters like 'asdf', completely off-topic, gibberish), YOU MUST NOT treat it as clinical data. "
+        f"Instead, generate a polite clarifying question asking the patient to restate their symptom, "
+        f"include relevant options where sensible (e.g. 'It is about my current visit', 'I want to say something else'), "
+        f"and YOU MUST set \"needs_clarification\": true in your response. "
+        f"Otherwise, ask exactly one clinically relevant next question chosen from the ontology dimensions for the patient's stated complaint "
+        f"that has not yet been covered. "
+        f"ALWAYS include 3-5 short, mutually exclusive, tappable answer options specific to that exact question in the 'chips' array "
+        f"(e.g. for a 'how long' question -> ['Today', '2-3 days', 'About a week', 'More than a week']; "
+        f"for a 'where exactly' question -> ['Center of chest', 'Left side', 'Right side', 'Spreads to arm/jaw']; "
+        f"for a 'how severe' question -> ['Mild', 'Moderate', 'Severe', 'Worst pain I\\'ve felt']). "
+        f"NEVER return an empty 'chips' array for a substantive question. "
+        f"Judge, using the full transcript so far, whether enough clinically useful information now exists to produce a usable Chief Complaint and HPI "
+        f"(onset, duration, severity, and at least one more relevant dimension covered). "
+        f"If yes, stop asking ontology questions and instead return exactly this JSON: {{\"is_closing\":true}}. "
+        f"Otherwise, return JSON like this: {{\"question\":str,\"chips\":[str],\"needs_clarification\":bool,\"is_closing\":false}}."
     )
 
+    result = _ask(prompt, default_fallback)
+
+    is_closing = bool(result.get("is_closing", False))
     q = result.get("question")
-    done = bool(result.get("done", False))
+    
+    if is_closing or (q and q.strip().lower() == closing_question.lower()):
+        return {
+            "question": closing_question,
+            "chips": [],
+            "escape_hatch": None,
+            "input_type": "freetext",
+            "done": False,
+            "needs_clarification": False
+        }
+
     needs_clarification = bool(result.get("needs_clarification", False))
 
     if q and q.strip().lower() in asked_questions:
         for fb in allopathic_fallbacks:
             if fb["question"].strip().lower() not in asked_questions:
-                return {**fb, "needs_clarification": False}
-        return {"question": None, "chips": [], "done": True, "needs_clarification": False}
+                return _format_fallback(fb)
+        return {
+            "question": closing_question,
+            "chips": [],
+            "escape_hatch": None,
+            "input_type": "freetext",
+            "done": False,
+            "needs_clarification": False
+        }
 
-    return {"question": q, "chips": result.get("chips", []), "done": done, "needs_clarification": needs_clarification}
+    return {
+        "question": q,
+        "chips": result.get("chips", []),
+        "escape_hatch": "Something else / not sure",
+        "input_type": "options",
+        "done": False,
+        "needs_clarification": needs_clarification
+    }
 
 
 def check_red_flag(text, mode="allopathic"):

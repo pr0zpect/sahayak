@@ -59,7 +59,9 @@ class InterviewStartView(APIView):
             "session_id": session.id,
             "mode": session.mode,
             "question": text,
-            "chips": question.get("chips", [])
+            "chips": question.get("chips", []),
+            "escape_hatch": "Something else / not sure",
+            "input_type": "options"
         }, status=201)
 
 
@@ -94,7 +96,10 @@ class InterviewRespondView(APIView):
             return Response({
                 "question": None,
                 "chips": [],
+                "escape_hatch": None,
+                "input_type": None,
                 "done": True,
+                "needs_clarification": False,
                 "red_flag": session.red_flag,
                 "red_flag_reason": session.red_flag_reason
             })
@@ -109,7 +114,10 @@ class InterviewRespondView(APIView):
         return Response({
             "question": text,
             "chips": next_item.get("chips", []),
+            "escape_hatch": next_item.get("escape_hatch"),
+            "input_type": next_item.get("input_type", "options"),
             "done": False,
+            "needs_clarification": next_item.get("needs_clarification", False),
             "red_flag": session.red_flag,
             "red_flag_reason": session.red_flag_reason
         })
