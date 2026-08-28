@@ -1,5 +1,5 @@
 """
-Demo-scale, rule-based drug interaction checker for MediKiosk.
+Demo-scale, rule-based drug interaction checker for Sahayak.
 This is intentionally a small, hardcoded reference list for hackathon demo
 purposes — it is NOT a claim of clinical completeness and must not be used
 as a substitute for a real, licensed clinical drug interaction database.

@@ -46,7 +46,7 @@ def build_fhir_bundle(session):
         "type": {"coding": [{"system": "http://loinc.org", "code": "34133-9", "display": "Summarization of Episode Note"}]},
         "subject": {"reference": f"Patient/{patient.id}"},
         "date": session.updated_at.isoformat(),
-        "title": f"MediKiosk Pre-Consultation OPD Intake Note ({session.mode.upper()})",
+        "title": f"Sahayak Pre-Consultation OPD Intake Note ({session.mode.upper()})",
         "section": [
             {
                 "title": "Transcript Record",

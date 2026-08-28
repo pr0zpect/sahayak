@@ -739,3 +739,142 @@ body {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ====================== */
+/* SAHAYAK LANDING PAGE   */
+/* ====================== */
+
+.sahayak-root {
+  min-height: 100vh;
+  background: #f7f8fc;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-primary);
+}
+
+.sahayak-header {
+  background: #ffffff;
+  border-bottom: 1px solid #eaecf0;
+  padding: 0 2.5rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.sahayak-brand { display: flex; align-items: baseline; gap: 0.6rem; }
+.sahayak-brand-main { font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #0f172a; letter-spacing: -0.4px; }
+.sahayak-brand-deva { font-size: 1rem; font-weight: 500; color: #64748b; }
+
+.sahayak-lang-pill {
+  background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 20px;
+  padding: 5px 16px; font-size: 0.875rem; font-weight: 500; color: #374151;
+  cursor: pointer; transition: all 0.18s ease; font-family: inherit;
+}
+.sahayak-lang-pill.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+.sahayak-lang-pill:hover:not(.active) { background: #e2e8f0; }
+
+.sahayak-lang-dropdown {
+  position: absolute; top: 58px; right: 2.5rem; background: white;
+  border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.10);
+  padding: 0.5rem; z-index: 200; display: flex; flex-direction: column; gap: 2px; min-width: 160px;
+}
+.sahayak-lang-dropdown-item {
+  background: none; border: none; border-radius: 8px; padding: 8px 14px;
+  text-align: left; font-family: inherit; font-size: 0.9rem; font-weight: 500;
+  color: #374151; cursor: pointer; transition: background 0.15s;
+}
+.sahayak-lang-dropdown-item:hover, .sahayak-lang-dropdown-item.active { background: #f1f5f9; color: #0f172a; }
+
+.sahayak-langbar {
+  background: #ffffff; border-bottom: 1px solid #eaecf0;
+  padding: 0.75rem 2.5rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.sahayak-langbar-label { font-size: 0.875rem; font-weight: 600; color: #6b7280; margin-right: 0.25rem; }
+.sahayak-langbar-btn {
+  background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 20px;
+  padding: 5px 18px; font-size: 0.875rem; font-weight: 500; color: #374151;
+  cursor: pointer; transition: all 0.18s ease; font-family: inherit;
+}
+.sahayak-langbar-btn.active { background: #14b8a6; color: #fff; border-color: #14b8a6; box-shadow: 0 2px 8px rgba(20,184,166,0.30); }
+.sahayak-langbar-btn:hover:not(.active) { border-color: #9ca3af; background: #f3f4f6; }
+
+.sahayak-main {
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem;
+}
+
+.sahayak-cards {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 960px; width: 100%;
+}
+@media (max-width: 768px) { .sahayak-cards { grid-template-columns: 1fr; max-width: 400px; } }
+
+.sahayak-card {
+  background: #ffffff; border: 1px solid #e5e7eb; border-radius: 20px;
+  padding: 2.5rem 2rem; display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 1rem; transition: box-shadow 0.2s ease, transform 0.2s ease;
+  position: relative; overflow: hidden;
+}
+.sahayak-card::before {
+  content: ''; position: absolute; inset: 0; opacity: 0; border-radius: 20px; transition: opacity 0.2s ease;
+}
+.sahayak-card.patient::before { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); }
+.sahayak-card.doctor::before  { background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+.sahayak-card.admin::before   { background: linear-gradient(135deg, #faf5ff, #ede9fe); }
+.sahayak-card:hover { box-shadow: 0 16px 40px rgba(0,0,0,0.10); transform: translateY(-4px); }
+.sahayak-card:hover::before { opacity: 1; }
+
+.sahayak-card-icon {
+  width: 76px; height: 76px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;
+}
+.sahayak-card-icon.patient { background: #f0fdfa; border: 2px solid #99f6e4; color: #0d9488; }
+.sahayak-card-icon.doctor  { background: #eff6ff; border: 2px solid #93c5fd; color: #2563eb; }
+.sahayak-card-icon.admin   { background: #faf5ff; border: 2px solid #c4b5fd; color: #7c3aed; }
+
+.sahayak-card-title { font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; position: relative; z-index: 1; }
+.sahayak-card-title.patient { color: #0d9488; }
+.sahayak-card-title.doctor  { color: #2563eb; }
+.sahayak-card-title.admin   { color: #7c3aed; }
+
+.sahayak-card-desc { font-size: 0.9rem; color: #6b7280; line-height: 1.55; flex: 1; position: relative; z-index: 1; }
+
+.sahayak-card-btn {
+  width: 100%; border: none; border-radius: 40px; padding: 0.8rem 1.5rem;
+  font-size: 0.95rem; font-weight: 700; font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  color: #fff; transition: all 0.2s ease; position: relative; z-index: 1;
+}
+.sahayak-card-btn.patient { background: #0d9488; box-shadow: 0 4px 14px rgba(13,148,136,0.35); }
+.sahayak-card-btn.patient:hover { background: #0f766e; }
+.sahayak-card-btn.doctor  { background: #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+.sahayak-card-btn.doctor:hover { background: #1d4ed8; }
+.sahayak-card-btn.admin   { background: #7c3aed; box-shadow: 0 4px 14px rgba(124,58,237,0.35); }
+.sahayak-card-btn.admin:hover { background: #6d28d9; }
+
+.sahayak-footer {
+  background: #ffffff; border-top: 1px solid #eaecf0; padding: 0.85rem 2.5rem;
+  display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: #9ca3af;
+}
+.sahayak-footer-dot { margin: 0 0.5rem; }
+.sahayak-footer-left { display: flex; align-items: center; }
+.sahayak-footer-right { display: flex; align-items: center; }
+.sahayak-footer-link { cursor: pointer; color: #6b7280; font-weight: 500; transition: color 0.15s; }
+.sahayak-footer-link:hover { color: #374151; }
+.sahayak-footer-opd {
+  display: flex; align-items: center; gap: 0.3rem; color: #dc2626; font-weight: 600;
+  background: #fef2f2; padding: 3px 10px; border-radius: 12px; border: 1px solid #fca5a5;
+}
+
+.sahayak-a11y {
+  background: #f9fafb; border-top: 1px solid #eaecf0; padding: 0.55rem 2.5rem;
+  display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #6b7280; font-weight: 500;
+}
+.sahayak-a11y-btn {
+  background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; padding: 3px 12px;
+  font-size: 0.8rem; font-weight: 600; font-family: inherit; cursor: pointer; color: #374151; transition: all 0.15s;
+}
+.sahayak-a11y-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
+.sahayak-a11y-btn:hover:not(.active) { background: #f3f4f6; border-color: #9ca3af; }
+
+body.high-contrast { filter: contrast(1.5) saturate(0.8); }

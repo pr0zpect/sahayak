@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { startInterview, respondInterview, uploadDocument, generateSummary, pushAbdm, grantConsent } from '../api';
+import { translations } from '../translations';
 import { 
   Mic, MicOff, Send, AlertTriangle, UploadCloud, CheckCircle2, 
   Volume2, VolumeX, ShieldCheck, ArrowRight, Activity, Leaf, ShieldAlert, Sparkles, User, Stethoscope 
@@ -7,6 +8,9 @@ import {
 
 export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSessionComplete }) {
   // Step state: 1: Consent/Mode, 2: Interview, 3: Document OCR & Clinical Flags, 4: Summary & ABDM Push
+    // i18n helper
+  const t = (key) => translations[language]?.[key] || translations['en'][key] || key;
+
   const [step, setStep] = useState(1);
 
   // Form State
@@ -26,6 +30,8 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
   const [chatHistory, setChatHistory] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [chips, setChips] = useState([]);
+  const [selectionMode, setSelectionMode] = useState('single');
+  const [selectedChips, setSelectedChips] = useState([]);
   const [inputAnswer, setInputAnswer] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,7 +44,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const recognitionRef = useRef(null);
 
-  // OCR & Clinical Safety Flags State
+  // OCR & {t('clinical_safety_flags')} State
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [clinicalFlags, setClinicalFlags] = useState([]);
   const [interactionAlerts, setInteractionAlerts] = useState([]);
@@ -95,6 +101,8 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       setActiveSessionId(data.session_id);
       setCurrentQuestion(data.question);
       setChips(data.chips || []);
+      setSelectionMode(data.selection_mode || 'single');
+      setSelectedChips([]);
       setChatHistory([{ turn: 1, speaker: 'ai', text: data.question }]);
       
       await grantConsent(data.session_id, consentScope).catch(() => {});
@@ -142,6 +150,8 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
         const aiTurnNum = updatedHistory.length + 1;
         setCurrentQuestion(aiQuestion);
         setChips(res.chips || []);
+        setSelectionMode(res.selection_mode || 'single');
+        setSelectedChips([]);
         setChatHistory([
           ...updatedHistory,
           { turn: aiTurnNum, speaker: 'ai', text: aiQuestion }
@@ -253,7 +263,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
         <div className="red-flag-banner">
           <div className="red-flag-icon">!</div>
           <div>
-            <div className="red-flag-title">EMERGENCY ALERT: Immediate Triage Escalation</div>
+            <div className="red-flag-title">{t('emergency_alert')}</div>
             <div className="red-flag-desc">{redFlagReason || 'Emergency symptom detected. Staff notified.'}</div>
           </div>
         </div>
@@ -261,16 +271,16 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
 
       <div className="step-indicator">
         <div className={`step-pill ${step === 1 ? 'active' : step > 1 ? 'completed' : ''}`}>
-          <span className="step-number">1</span> Mode & Consent
+          <span className="step-number">1</span> {t('step_1')}
         </div>
         <div className={`step-pill ${step === 2 ? 'active' : step > 2 ? 'completed' : ''}`}>
-          <span className="step-number">2</span> {mode === 'ayush' ? 'AYUSH Intake' : 'Interview'}
+          <span className="step-number">2</span> {mode === 'ayush' ? t('ayush_assistant') : t('step_2')}
         </div>
         <div className={`step-pill ${step === 3 ? 'active' : step > 3 ? 'completed' : ''}`}>
-          <span className="step-number">3</span> OCR & Safety
+          <span className="step-number">3</span> {t('step_3')}
         </div>
         <div className={`step-pill ${step === 4 ? 'active' : ''}`}>
-          <span className="step-number">4</span> Review & ABDM
+          <span className="step-number">4</span> {t('step_4')}
         </div>
       </div>
 
@@ -282,16 +292,16 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <Sparkles size={32} />
             </div>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
-              Welcome to MediKiosk
+              {t('welcome_title')}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.94rem', marginTop: '0.2rem' }}>
-              Adaptive pre-consultation intake & digital health records integration
+              {t('welcome_desc')}
             </p>
           </div>
 
           {/* Mode Switcher */}
           <div className="form-group">
-            <label className="form-label">Select Intake Care Model</label>
+            <label className="form-label">{t('select_care_model')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
               <div 
                 className={`summary-card-field ${mode === 'allopathic' ? 'active-source' : ''}`}
@@ -301,8 +311,8 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem auto' }}>
                   <Activity size={22} />
                 </div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '1rem', fontWeight: 700 }}>Allopathic OPD</strong>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>SOCRATES History Taking</span>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '1rem', fontWeight: 700 }}>{t('mode_allopathic')}</strong>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('allopathic_desc')}</span>
               </div>
               <div 
                 className={`summary-card-field ${mode === 'ayush' ? 'active-source' : ''}`}
@@ -312,18 +322,18 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem auto' }}>
                   <Leaf size={22} />
                 </div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '1rem', fontWeight: 700 }}>AYUSH OPD</strong>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Dashavidha Pariksha & Agni</span>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '1rem', fontWeight: 700 }}>{t('mode_ayush')}</strong>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('ayush_desc')}</span>
               </div>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Patient Full Name *</label>
+            <label className="form-label">{t('patient_full_name')}</label>
             <input 
               type="text" 
               className="form-input" 
-              placeholder="e.g. Rukmini Devi" 
+              placeholder={t('patient_name_placeholder')} 
               value={patientName} 
               onChange={e => setPatientName(e.target.value)} 
               required 
@@ -331,19 +341,19 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
           </div>
 
           <div className="form-group">
-            <label className="form-label">Preferred Interview Language</label>
+            <label className="form-label">{t('preferred_language')}</label>
             <select className="form-select" value={language} onChange={e => setLanguage(e.target.value)}>
-              <option value="en">English</option>
-              <option value="hi">Hindi (हिंदी)</option>
-              <option value="ta">Tamil (தமிழ்)</option>
-              <option value="te">Telugu (తెలుగు)</option>
-              <option value="kn">Kannada (கன்னட)</option>
-              <option value="bn">Bengali (বাংলা)</option>
+              <option value="en">{t('language_en')}</option>
+              <option value="hi">{t('language_hi')}</option>
+              <option value="ta">{t('language_ta')}</option>
+              <option value="te">{t('language_te')}</option>
+              <option value="kn">{t('language_kn')}</option>
+              <option value="bn">{t('language_bn')}</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label">ABHA ID / Number (Optional)</label>
+            <label className="form-label">{t('abha_id_optional')}</label>
             <input 
               type="text" 
               className="form-input" 
@@ -355,9 +365,9 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
 
           <div className="consent-box">
             <strong style={{ color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', fontWeight: 700 }}>
-              <ShieldCheck size={18} color="#10b981" /> DPDP Act 2023 Consent Declaration
+              <ShieldCheck size={18} color="#10b981" /> {t('dpdp_title')}
             </strong>
-            I grant permission for MediKiosk to record my clinical history, digitize attached prescriptions via OCR, and share structured records with the attending clinician and India ABDM network. I retain the right to revoke consent at any time.
+            {t('dpdp_text')}
           </div>
 
           <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -392,10 +402,10 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <User size={18} color="#2563eb" />
               <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>
-                Patient: {patientName}
+                {t('patient_label')} {patientName}
               </span>
               <span style={{ fontSize: '0.75rem', background: mode === 'ayush' ? '#ecfdf5' : '#eff6ff', color: mode === 'ayush' ? '#065f46' : '#1e40af', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-                {mode.toUpperCase()} MODE
+                {mode.toUpperCase()} {t('mode_suffix')}
               </span>
             </div>
             <button 
@@ -413,8 +423,8 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               {chatHistory.map((item, idx) => (
                 <div key={idx} className={`chat-bubble ${item.speaker}`}>
                   <div className="speaker-badge">
-                    <span>{item.speaker === 'ai' ? (mode === 'ayush' ? 'AYUSH Assistant' : 'AI Clinical Assistant') : patientName}</span>
-                    <span className="turn-badge">Turn {item.turn}</span>
+                    <span>{item.speaker === 'ai' ? (mode === 'ayush' ? t('ayush_assistant') : t('ai_assistant')) : patientName}</span>
+                    <span className="turn-badge">{t('turn_label')} {item.turn}</span>
                     {item.inputMode && (
                       <span className="turn-badge" style={{ background: item.speaker === 'patient' ? 'rgba(255, 255, 255, 0.25)' : '#e0f2fe', color: item.speaker === 'patient' ? 'white' : '#0369a1' }}>
                         {item.inputMode}
@@ -426,7 +436,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               ))}
               {isLoading && (
                 <div className="chat-bubble ai" style={{ opacity: 0.7 }}>
-                  <em>MediKiosk is formulating the next intake question...</em>
+                  <em>{t('thinking')}</em>
                 </div>
               )}
               <div ref={chatEndRef} />
@@ -434,21 +444,44 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
 
             {/* Quick Reply Symptom Chips */}
             {chips.length > 0 && (
-              <div className="chips-container">
+              <div className="chips-container" style={{ flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px', fontWeight: 700 }}>
-                  Quick replies:
+                  {selectionMode === 'multi' ? t('select_all') : t('quick_replies')}
                 </span>
-                {chips.map((chip, idx) => (
-                  <button 
-                    key={idx} 
-                    type="button" 
-                    className="chip-button"
-                    onClick={() => submitAnswer(chip, 'touch')}
+                {chips.map((chip, idx) => {
+                  const isSelected = selectedChips.includes(chip);
+                  return (
+                    <button 
+                      key={idx} 
+                      type="button" 
+                      className={`chip-button ${isSelected ? 'selected' : ''}`}
+                      style={isSelected ? { background: '#2563eb', color: 'white', borderColor: '#2563eb' } : {}}
+                      onClick={() => {
+                        if (selectionMode === 'multi') {
+                          setSelectedChips(prev => 
+                            prev.includes(chip) ? prev.filter(c => c !== chip) : [...prev, chip]
+                          );
+                        } else {
+                          submitAnswer(chip, 'touch');
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      {chip}
+                    </button>
+                  );
+                })}
+                {selectionMode === 'multi' && selectedChips.length > 0 && (
+                  <button
+                    type="button"
+                    className="chip-button submit-multi"
+                    style={{ background: '#10b981', color: 'white', borderColor: '#10b981', fontWeight: 700, marginLeft: 'auto' }}
+                    onClick={() => submitAnswer(selectedChips.join(', '), 'touch')}
                     disabled={isLoading}
                   >
-                    {chip}
+                    {t('done')} <CheckCircle2 size={14} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: '4px' }}/>
                   </button>
-                ))}
+                )}
               </div>
             )}
 
@@ -459,7 +492,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <input 
                 type="text" 
                 className="chat-text-input" 
-                placeholder={isListening ? 'Listening to your voice...' : 'Type your response here or tap mic...'} 
+                placeholder={isListening ? t('listening') : t('type_placeholder')} 
                 value={inputAnswer}
                 onChange={(e) => setInputAnswer(e.target.value)}
                 disabled={isLoading}
@@ -473,7 +506,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                 {isListening ? <MicOff size={22} /> : <Mic size={22} />}
               </button>
               <button type="submit" className="send-btn" disabled={!inputAnswer.trim() || isLoading}>
-                <span>Send</span>
+                <span>{t('send')}</span>
                 <Send size={16} />
               </button>
             </form>
@@ -503,10 +536,10 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                   onMouseOut={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#64748b'; }}
                 >
                   <Sparkles size={14} />
-                  {isLoading ? 'Generating Summary...' : 'Generate Summary Now'}
+                  {isLoading ? t('generating_summary') : t('generate_summary_now')}
                 </button>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                  You can finish early — the doctor will see what's been shared so far.
+                  {t('finish_early_text')}
                 </div>
               </div>
             )}
@@ -514,28 +547,28 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
         </div>
       )}
 
-      {/* STEP 3: Document OCR Upload & Clinical Safety Flags */}
+      {/* STEP 3: Document OCR Upload & {t('clinical_safety_flags')} */}
       {step === 3 && (
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
           <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.4rem', textAlign: 'center', color: '#0f172a' }}>
-            Prescription Digitization & Safety Check
+            {t('step3_title')}
           </h3>
           <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.92rem' }}>
-            Scan paper reports to extract structured medicines and detect potential drug interactions or lab alerts
+            {t('step3_sub')}
           </p>
 
           <label className="upload-dropzone">
             <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
             <UploadCloud size={44} color="#2563eb" style={{ margin: '0 auto 0.6rem auto' }} />
             <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.05rem' }}>
-              {isUploading ? 'Scanning document & running safety checks...' : 'Click to Upload Prescription or Lab Report'}
+              {isUploading ? t('upload_scanning') : t('upload_click')}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
               Supports camera snapshots, PNG, or JPG images
             </div>
           </label>
 
-          {/* Clinical Safety Flags Alert Panel */}
+          {/* {t('clinical_safety_flags')} Alert Panel */}
           {clinicalFlags.length > 0 && (
             <div style={{ background: 'var(--warning-bg)', border: '1.5px solid var(--warning-border)', borderRadius: 'var(--radius-md)', padding: '1.1rem', marginBottom: '1.5rem' }}>
               <div style={{ color: 'var(--warning-text)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.6rem', fontSize: '0.95rem' }}>
@@ -659,7 +692,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
             <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 'var(--radius-md)', padding: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--primary)', fontWeight: 800, letterSpacing: '0.5px' }}>Chief Complaint</div>
+                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--primary)', fontWeight: 800, letterSpacing: '0.5px' }}>{t('chief_complaint')}</div>
                   <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.02rem', marginTop: '0.2rem' }}>{summaryData.chief_complaint?.text || 'Not reported.'}</div>
                 </div>
                 <div>

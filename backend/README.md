@@ -1,4 +1,4 @@
-# MediKiosk backend
+# Sahayak backend
 
 Pure Django + Django REST Framework JSON backend for a pre-consultation OPD intake kiosk. It has no frontend, templates, or static application assets.
 

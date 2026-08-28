@@ -10,7 +10,8 @@ export default function DoctorCommandCenter({ activeSessionId }) {
   const [password, setPassword] = useState('password123');
   const [authError, setAuthError] = useState('');
 
-  const [selectedSessionId, setSelectedSessionId] = useState(activeSessionId || 13);
+  const [selectedSessionId, setSelectedSessionId] = useState(activeSessionId || null);
+  const [fetchError, setFetchError] = useState('');
   const [mode, setMode] = useState('allopathic');
   const [summaryData, setSummaryData] = useState(null);
   const [transcripts, setTranscripts] = useState([]);
@@ -46,6 +47,7 @@ export default function DoctorCommandCenter({ activeSessionId }) {
     if (!token || !sid) return;
     setIsLoading(true);
     setSaveSuccess(false);
+    setFetchError('');
     try {
       const data = await getSummaryDetail(sid, token);
       setMode(data.mode || 'allopathic');
@@ -58,7 +60,7 @@ export default function DoctorCommandCenter({ activeSessionId }) {
       setConsentRecords(data.consent_records || []);
       setAbdmLogs(data.abdm_logs || []);
     } catch (err) {
-      alert(`Could not load Session #${sid}. Ensure session exists.`);
+      setFetchError(`Could not load Session #${sid}. Ensure session exists and has a summary generated.`);
     } finally {
       setIsLoading(false);
     }
@@ -191,15 +193,16 @@ export default function DoctorCommandCenter({ activeSessionId }) {
   return (
     <div>
       {/* Top Header Controls */}
-      <div style={{ background: '#ffffff', padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--panel-border)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', boxShadow: 'var(--shadow-card)' }}>
+      <div style={{ background: '#ffffff', padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--panel-border)', marginBottom: fetchError ? '0' : '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', boxShadow: 'var(--shadow-card)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>Session ID:</span>
           <input 
             type="number" 
             className="form-input" 
             style={{ width: '90px', padding: '0.45rem 0.75rem', background: '#f8fafc' }} 
-            value={selectedSessionId} 
-            onChange={e => setSelectedSessionId(Number(e.target.value))} 
+            value={selectedSessionId || ''} 
+            placeholder="e.g. 18"
+            onChange={e => setSelectedSessionId(e.target.value ? Number(e.target.value) : null)} 
           />
           <button type="button" className="btn-primary" style={{ padding: '0.5rem 1rem', width: 'auto', fontSize: '0.88rem' }} onClick={() => fetchSummary(selectedSessionId)}>
             <RefreshCw size={15} /> Fetch
@@ -220,6 +223,13 @@ export default function DoctorCommandCenter({ activeSessionId }) {
           </button>
         </div>
       </div>
+
+      {fetchError && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '0.75rem 1.25rem', borderRadius: '12px', marginBottom: '1.25rem', fontSize: '0.88rem', fontWeight: 600 }}>
+          {fetchError}
+        </div>
+      )}
+
 
       {/* Clinical Safety Alert Panel if flags exist */}
       {clinicalFlags.length > 0 && (

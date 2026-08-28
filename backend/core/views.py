@@ -44,7 +44,7 @@ class InterviewStartView(APIView):
         )
 
         session = Session.objects.create(patient=patient, mode=data.get("mode", "allopathic"))
-        question = llm.get_first_question(mode=session.mode)
+        question = llm.get_first_question(mode=session.mode, language=session.patient.language)
         text = question.get("question", "What brings you in today?")
 
         Transcript.objects.create(session=session, turn=1, speaker="ai", text=text, language=data["language"], dimension_asked=question.get("dimension"))
@@ -61,7 +61,8 @@ class InterviewStartView(APIView):
             "question": text,
             "chips": question.get("chips", []),
             "escape_hatch": "Something else / not sure",
-            "input_type": "options"
+            "input_type": "options",
+            "selection_mode": question.get("selection_mode", "single")
         }, status=201)
 
 
@@ -88,7 +89,7 @@ class InterviewRespondView(APIView):
         if flag["flagged"]:
             session.red_flag, session.red_flag_reason = True, flag["reason"]
 
-        next_item = llm.get_next_question(_history(session), mode=session.mode)
+        next_item = llm.get_next_question(_history(session), mode=session.mode, language=session.patient.language)
 
         if next_item.get("done"):
             session.status = Session.Status.AWAITING_SUMMARY
@@ -116,6 +117,7 @@ class InterviewRespondView(APIView):
             "chips": next_item.get("chips", []),
             "escape_hatch": next_item.get("escape_hatch"),
             "input_type": next_item.get("input_type", "options"),
+            "selection_mode": next_item.get("selection_mode", "single"),
             "done": False,
             "needs_clarification": next_item.get("needs_clarification", False),
             "red_flag": session.red_flag,

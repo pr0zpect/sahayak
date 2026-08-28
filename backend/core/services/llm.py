@@ -14,14 +14,22 @@ ALLOPATHIC_ONTOLOGY = {
 }
 
 AYUSH_ONTOLOGY = {
-    "Prakriti Assessment": ["Vata", "Pitta", "Kapha", "body constitution"],
-    "Vikriti Imbalance": ["current symptoms", "dosha aggravation"],
-    "Agni & Koshtha": ["Mandagni", "Tikshnagni", "Vishamagni", "bowel patterns"],
-    "Ahara & Vihara": ["dietary habits", "sleep/Nidra", "exercise/Vyayama", "lifestyle"],
+    "Prakriti Assessment": ["body frame", "skin type", "temperature preference"],
+    "Vikriti Imbalance": ["current symptoms", "recent bodily changes"],
+    "Agni & Koshtha": ["appetite", "bowel movements", "acidity or gas"],
+    "Ahara & Vihara": ["diet", "sleep", "stress levels", "exercise routine"],
 }
 
+MULTI_SELECT_DIMENSIONS = {"associated symptoms", "current symptoms", "diet"}
 
-def _ask(prompt, fallback):
+
+def _ask(prompt, fallback, language="en"):
+    lang_names = {"en": "English", "hi": "Hindi", "bn": "Bengali", "te": "Telugu", "ta": "Tamil"}
+    lang_name = lang_names.get(language, "English")
+    
+    if language != "en":
+        prompt += f"\n\nRespond in {lang_name} (language code: {language}). All question text and answer options must be written in this language, not English."
+
     try:
         client = InferenceClient(api_key=os.getenv("HF_API_KEY"))
         # Fallback options: Qwen/Qwen2.5-7B-Instruct or meta-llama/Llama-3.2-3B-Instruct
@@ -50,19 +58,21 @@ def _ask(prompt, fallback):
         return fallback
 
 
-def get_first_question(mode="allopathic"):
+def get_first_question(mode="allopathic", language="en"):
     if mode == "ayush":
-        return {
-            "question": "Namaste! Welcome to Ayurvedic Intake. What brings you in today, and how would you describe your digestion and energy?",
-            "chips": ["Digestive/Agni Issue", "Joint Pain (Vata)", "Skin/Heat (Pitta)", "Respiratory/Heavy (Kapha)"]
-        }
+        return _ask(
+            f"Ask one opening question for an Ayurvedic intake. Available complaint ontology: {json.dumps(AYUSH_ONTOLOGY)}. Return {{\"question\":str,\"chips\":[str]}}.",
+            {"question": "Namaste! Welcome to Ayurvedic Intake. What brings you in today?", "chips": list(AYUSH_ONTOLOGY)},
+            language=language
+        )
     return _ask(
         f"Ask one opening question for an intake. Available complaint ontology: {json.dumps(ALLOPATHIC_ONTOLOGY)}. Return {{\"question\":str,\"chips\":[str]}}.",
-        {"question": "What brings you in today?", "chips": list(ALLOPATHIC_ONTOLOGY)}
+        {"question": "What brings you in today?", "chips": list(ALLOPATHIC_ONTOLOGY)},
+        language=language
     )
 
 
-def get_next_question(transcript, mode="allopathic"):
+def get_next_question(transcript, mode="allopathic", language="en"):
     patient_answers = sum(1 for item in transcript if item.get("speaker") == "patient")
     asked_questions = [t.get("text", "").strip().lower() for t in transcript if t.get("speaker") == "ai"]
     
@@ -98,18 +108,9 @@ def get_next_question(transcript, mode="allopathic"):
             "input_type": "options",
             "done": False,
             "needs_clarification": False,
-            "dimension": None
+            "dimension": None,
+            "selection_mode": "single"
         }
-
-    if mode == "ayush":
-        ayush_fallbacks = [
-            {"question": "How is your appetite (Agni) and bowel movement pattern (Koshtha)?", "chips": ["Regular appetite", "Irregular/Gas", "Low appetite", "Burning sensation"]},
-            {"question": "Could you describe your daily diet (Ahara), sleep pattern (Nidra), and stress levels?", "chips": ["Spicy/Oily food", "Late night sleep", "High stress", "Balanced diet"]},
-            {"question": "Do you feel sensitive to cold or heat, and how is your body energy throughout the day?", "chips": ["Sensitive to cold", "Sensitive to heat", "Low energy/Heavy", "Energetic"]},
-            {"question": "Have you noticed any swelling, joint stiffness, or skin flare-ups?", "chips": ["Joint stiffness", "Skin redness", "Body heaviness", "None"]},
-        ]
-        fb_idx = min(patient_answers, len(ayush_fallbacks) - 1)
-        return _format_fallback(ayush_fallbacks[fb_idx])
 
     # Allopathic SOCRATES rotation
     allopathic_fallbacks = [
@@ -118,31 +119,46 @@ def get_next_question(transcript, mode="allopathic"):
         {"question": "Are you experiencing any accompanying symptoms like fever, nausea, or dizziness?", "chips": ["Fever", "Nausea", "Dizziness", "No other symptoms"]},
         {"question": "Do you have any existing medical conditions or daily medications?", "chips": ["Diabetes", "Hypertension", "Asthma", "No prior conditions"]},
     ]
+    
+    ayush_fallbacks = [
+        {"question": "How is your appetite (Agni) and bowel movement pattern (Koshtha)?", "chips": ["Regular appetite", "Irregular/Gas", "Low appetite", "Burning sensation"]},
+        {"question": "Could you describe your daily diet (Ahara), sleep pattern (Nidra), and stress levels?", "chips": ["Spicy/Oily food", "Late night sleep", "High stress", "Balanced diet"]},
+        {"question": "Do you feel sensitive to cold or heat, and how is your body energy throughout the day?", "chips": ["Sensitive to cold", "Sensitive to heat", "Low energy/Heavy", "Energetic"]},
+        {"question": "Have you noticed any swelling, joint stiffness, or skin flare-ups?", "chips": ["Joint stiffness", "Skin redness", "Body heaviness", "None"]},
+    ]
 
-    fallback_idx = min(patient_answers, len(allopathic_fallbacks) - 1)
-    default_fallback = _format_fallback(allopathic_fallbacks[fallback_idx])
+    fb_list = ayush_fallbacks if mode == "ayush" else allopathic_fallbacks
+    fallback_idx = min(patient_answers, len(fb_list) - 1)
+    default_fallback = _format_fallback(fb_list[fallback_idx])
 
     stated_complaint = None
     allowed_dimensions_str = "the standard clinical dimensions for their complaint"
     covered_dimensions_str = "None"
     remaining_dimensions_str = "All"
+    
     if mode == "allopathic":
+        ontology_dict = ALLOPATHIC_ONTOLOGY
         for t in transcript:
             if t.get("speaker") == "patient":
                 ans = t.get("text", "").lower()
-                for key in ALLOPATHIC_ONTOLOGY:
-                    if key in ans:
+                for key in ontology_dict:
+                    if key.lower() in ans:
                         stated_complaint = key
                         break
                 if stated_complaint:
                     break
         if stated_complaint:
-            dims = ALLOPATHIC_ONTOLOGY[stated_complaint]
-            covered_dims = [t.get("dimension_asked") for t in transcript if t.get("speaker") == "ai" and t.get("dimension_asked")]
-            remaining_dims = [d for d in dims if d not in covered_dims]
-            allowed_dimensions_str = f"the specific dimension list for '{stated_complaint}': {json.dumps(dims)}"
-            covered_dimensions_str = json.dumps(covered_dims) if covered_dims else "None"
-            remaining_dimensions_str = json.dumps(remaining_dims) if remaining_dims else "None (All covered)"
+            dims = ontology_dict[stated_complaint]
+    else:
+        stated_complaint = "AYUSH Intake"
+        dims = [d for category in AYUSH_ONTOLOGY.values() for d in category]
+
+    if stated_complaint:
+        covered_dims = [t.get("dimension_asked") for t in transcript if t.get("speaker") == "ai" and t.get("dimension_asked")]
+        remaining_dims = [d for d in dims if d not in covered_dims]
+        allowed_dimensions_str = f"the specific dimension list for '{stated_complaint}': {json.dumps(dims)}"
+        covered_dimensions_str = json.dumps(covered_dims) if covered_dims else "None"
+        remaining_dimensions_str = json.dumps(remaining_dims) if remaining_dims else "None (All covered)"
 
     complaint_mention = f"The patient's stated complaint is '{stated_complaint}'. " if stated_complaint else ""
     prompt = (
@@ -169,11 +185,11 @@ def get_next_question(transcript, mode="allopathic"):
         f"Judge, using the full transcript so far, whether enough clinically useful information now exists to produce a usable Chief Complaint and HPI "
         f"by evaluating coverage against THE STATED COMPLAINT'S OWN DIMENSION LIST, not a generic checklist. "
         f"If the relevant dimensions are adequately covered (or Remaining uncovered dimensions is 'None (All covered)'), stop asking ontology questions and instead return exactly this JSON: {{\"is_closing\":true}}. "
-        f"Otherwise, return JSON like this: {{\"question\":str,\"chips\":[str],\"needs_clarification\":bool,\"is_closing\":false,\"dimension\":str}} "
-        f"where 'dimension' is the name of the ONE uncovered dimension you are asking about."
+        f"Otherwise, return JSON like this: {{\"question\":str,\"chips\":[str],\"needs_clarification\":bool,\"is_closing\":false,\"dimension\":str,\"selection_mode\":str}} "
+        f"where 'dimension' is the name of the ONE uncovered dimension you are asking about, and 'selection_mode' is 'multi' if the dimension naturally allows multiple concurrent answers (e.g. {list(MULTI_SELECT_DIMENSIONS)}), or 'single' otherwise."
     )
 
-    result = _ask(prompt, default_fallback)
+    result = _ask(prompt, default_fallback, language=language)
 
     is_closing = bool(result.get("is_closing", False))
     q = result.get("question")
@@ -210,7 +226,8 @@ def get_next_question(transcript, mode="allopathic"):
         "input_type": "options",
         "done": False,
         "needs_clarification": needs_clarification,
-        "dimension": result.get("dimension")
+        "dimension": result.get("dimension"),
+        "selection_mode": result.get("selection_mode", "single")
     }
 
 

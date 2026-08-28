@@ -5,6 +5,7 @@ from .views import (
     RedFlagCheckView, SummaryDetailView, SummaryGenerateView,
     TokenGenerateView, TokenLookupView, TokenValidateView, TokenRejectionStatusView,
 )
+from .admin_views import QueueAdminView, AlertsAdminView, AnalyticsAdminView
 
 urlpatterns = [
     path("interview/start/", InterviewStartView.as_view()),
@@ -25,4 +26,9 @@ urlpatterns = [
     path("token/<str:token>/validate/", TokenValidateView.as_view()),
     path("token/<str:token>/rejection-status/", TokenRejectionStatusView.as_view()),
     path("token/<str:token>/", TokenLookupView.as_view()),
+    # Hospital Admin Portal routes
+    path("admin/queue/", QueueAdminView.as_view()),
+    path("admin/alerts/", AlertsAdminView.as_view()),
+    path("admin/analytics/", AnalyticsAdminView.as_view()),
 ]
+

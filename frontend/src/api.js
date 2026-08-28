@@ -132,3 +132,29 @@ export const patchSummaryDetail = async (sessionId, token, structuredJson, docto
   if (!res.ok) throw new Error('Failed to update summary');
   return res.json();
 };
+
+export const getAdminQueue = async (token, status = '') => {
+  const url = status ? `${BASE_URL}/admin/queue/?status=${status}` : `${BASE_URL}/admin/queue/`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Token ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to fetch admin queue');
+  return res.json();
+};
+
+export const getAdminAlerts = async (token) => {
+  const res = await fetch(`${BASE_URL}/admin/alerts/`, {
+    headers: { 'Authorization': `Token ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to fetch admin alerts');
+  return res.json();
+};
+
+export const getAdminAnalytics = async (token) => {
+  const res = await fetch(`${BASE_URL}/admin/analytics/`, {
+    headers: { 'Authorization': `Token ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to fetch admin analytics');
+  return res.json();
+};
+

@@ -3,7 +3,7 @@ from core.models import ClinicalFlag, ConsentRecord, Document, Patient, Session,
 
 
 class Command(BaseCommand):
-    help = "Creates full-scope demo MediKiosk patients, sessions (Allopathic + AYUSH), OCR document, and clinical safety flags."
+    help = "Creates full-scope demo Sahayak patients, sessions (Allopathic + AYUSH), OCR document, and clinical safety flags."
 
     def handle(self, *args, **options):
         # 1. Allopathic Demo Patient
