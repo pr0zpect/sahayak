@@ -140,14 +140,14 @@ export default function DoctorCommandCenter({ activeSessionId }) {
           <div className="brand-logo" style={{ margin: '0 auto 1rem auto', width: '56px', height: '56px' }}>
             <UserCheck size={30} />
           </div>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem' }}>Doctor Command Center</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>Doctor Command Center</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
             Clinician Verification & Source-Linked Traceability
           </p>
         </div>
 
         {authError && (
-          <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', padding: '0.75rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.88rem' }}>
+          <div style={{ background: 'var(--danger-bg)', border: '1.5px solid var(--danger-border)', color: 'var(--danger-text)', padding: '0.75rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.88rem', fontWeight: 600 }}>
             {authError}
           </div>
         )}
@@ -191,47 +191,47 @@ export default function DoctorCommandCenter({ activeSessionId }) {
   return (
     <div>
       {/* Top Header Controls */}
-      <div style={{ background: 'var(--panel-bg)', padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--panel-border)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontWeight: 700, color: 'white' }}>Session ID:</span>
+      <div style={{ background: '#ffffff', padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--panel-border)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>Session ID:</span>
           <input 
             type="number" 
             className="form-input" 
-            style={{ width: '90px', padding: '0.4rem 0.6rem' }} 
+            style={{ width: '90px', padding: '0.45rem 0.75rem', background: '#f8fafc' }} 
             value={selectedSessionId} 
             onChange={e => setSelectedSessionId(Number(e.target.value))} 
           />
-          <button type="button" className="btn-primary" style={{ padding: '0.45rem 0.9rem', width: 'auto', fontSize: '0.85rem' }} onClick={() => fetchSummary(selectedSessionId)}>
-            <RefreshCw size={14} /> Fetch
+          <button type="button" className="btn-primary" style={{ padding: '0.5rem 1rem', width: 'auto', fontSize: '0.88rem' }} onClick={() => fetchSummary(selectedSessionId)}>
+            <RefreshCw size={15} /> Fetch
           </button>
-          <span style={{ fontSize: '0.8rem', background: mode === 'ayush' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)', color: mode === 'ayush' ? '#6ee7b7' : '#c7d2fe', padding: '4px 10px', borderRadius: '12px', fontWeight: 700 }}>
-            {mode === 'ayush' ? 'AYUSH Mode' : 'Allopathic Mode'}
+          <span style={{ fontSize: '0.82rem', background: mode === 'ayush' ? '#ecfdf5' : '#eff6ff', color: mode === 'ayush' ? '#065f46' : '#1e40af', padding: '5px 12px', borderRadius: '16px', fontWeight: 800, border: mode === 'ayush' ? '1px solid #a7f3d0' : '1px solid #bfdbfe' }}>
+            {mode === 'ayush' ? 'AYUSH MODE' : 'ALLOPATHIC MODE'}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {saveSuccess && (
-            <span style={{ color: 'var(--success-text)', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <CheckCircle2 size={16} /> Saved & Verified
+            <span style={{ color: 'var(--success-text)', fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <CheckCircle2 size={18} /> Saved & Verified
             </span>
           )}
-          <button type="button" className="btn-primary" style={{ padding: '0.5rem 1.25rem', width: 'auto', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} onClick={handleSaveSummary} disabled={isLoading}>
-            <Save size={16} /> Save Summary
+          <button type="button" className="btn-primary" style={{ padding: '0.6rem 1.4rem', width: 'auto', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} onClick={handleSaveSummary} disabled={isLoading}>
+            <Save size={18} /> Save Summary
           </button>
         </div>
       </div>
 
       {/* Clinical Safety Alert Panel if flags exist */}
       {clinicalFlags.length > 0 && (
-        <div style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
-          <div style={{ color: 'var(--warning-text)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-            <ShieldAlert size={18} /> Clinical Safety Alerts Surfaced ({clinicalFlags.length})
+        <div style={{ background: 'var(--warning-bg)', border: '1.5px solid var(--warning-border)', padding: '1.1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
+          <div style={{ color: 'var(--warning-text)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.6rem', fontSize: '0.95rem' }}>
+            <ShieldAlert size={20} /> Clinical Safety Alerts Surfaced ({clinicalFlags.length})
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             {clinicalFlags.map((flag, idx) => (
-              <div key={idx} style={{ fontSize: '0.85rem', color: 'white', background: 'rgba(15, 23, 42, 0.5)', padding: '0.6rem', borderRadius: 'var(--radius-sm)' }}>
+              <div key={idx} style={{ fontSize: '0.88rem', color: '#0f172a', background: '#ffffff', padding: '0.7rem 0.9rem', borderRadius: '12px', border: '1px solid #fde68a' }}>
                 {flag.flag_type === 'abnormal_value' ? (
-                  <div>⚠️ <strong>{flag.detail.test_name}:</strong> {flag.detail.value} (Ref: {flag.detail.reference_range}) — Status: <span style={{ color: '#f87171', fontWeight: 700 }}>{flag.detail.status}</span></div>
+                  <div>⚠️ <strong>{flag.detail.test_name}:</strong> {flag.detail.value} (Ref: {flag.detail.reference_range}) — Status: <strong style={{ color: '#dc2626' }}>{flag.detail.status}</strong></div>
                 ) : (
                   <div>🚫 <strong>Drug Interaction:</strong> {flag.detail.interacting_pair?.join(' + ')} — {flag.detail.description}</div>
                 )}
@@ -247,7 +247,7 @@ export default function DoctorCommandCenter({ activeSessionId }) {
         <div className="doc-pane">
           <div className="pane-title">
             <span>Intake Transcript & OCR Evidence</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Click summary cards to highlight source turns</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700 }}>Click summary cards to highlight turns</span>
           </div>
 
           <div className="scroll-content">
@@ -259,20 +259,20 @@ export default function DoctorCommandCenter({ activeSessionId }) {
                   ref={el => transcriptRefs.current[t.turn] = el}
                   className={`transcript-item ${isHighlighted ? 'highlighted' : ''}`}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                    <strong style={{ color: t.speaker === 'patient' ? '#818cf8' : '#38bdf8', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                    <strong style={{ color: t.speaker === 'patient' ? '#2563eb' : '#0284c7', fontSize: '0.85rem' }}>
                       {t.speaker === 'patient' ? 'Patient' : 'AI Assistant'}
                     </strong>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Turn #{t.turn}</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Turn #{t.turn}</span>
                   </div>
-                  <div style={{ fontSize: '0.9rem', color: 'white' }}>{t.text}</div>
+                  <div style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 500 }}>{t.text}</div>
                 </div>
               );
             })}
 
             {documents.length > 0 && (
               <div style={{ marginTop: '1.5rem' }}>
-                <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.5rem', fontWeight: 700 }}>
+                <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--primary)', marginBottom: '0.6rem', fontWeight: 800 }}>
                   Uploaded Documents ({documents.length})
                 </h4>
                 {documents.map((doc) => {
@@ -280,11 +280,11 @@ export default function DoctorCommandCenter({ activeSessionId }) {
                   return (
                     <div key={doc.id} className={`transcript-item ${isDocHighlighted ? 'highlighted' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <strong style={{ color: 'white', fontSize: '0.85rem' }}>Doc #{doc.id} ({doc.ocr_method})</strong>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--success-text)' }}>Conf: {(doc.confidence * 100).toFixed(0)}%</span>
+                        <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>Doc #{doc.id} ({doc.ocr_method})</strong>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--success-text)', fontWeight: 700 }}>Conf: {(doc.confidence * 100).toFixed(0)}%</span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        {doc.extracted_text.slice(0, 100)}...
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                        {doc.extracted_text.slice(0, 110)}...
                       </div>
                     </div>
                   );
@@ -298,7 +298,7 @@ export default function DoctorCommandCenter({ activeSessionId }) {
         <div className="doc-pane">
           <div className="pane-title">
             <span>Structured Summary ({mode.toUpperCase()})</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>Click to trace source turns</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700 }}>Click cards to trace sources</span>
           </div>
 
           <div className="scroll-content">
@@ -332,27 +332,27 @@ export default function DoctorCommandCenter({ activeSessionId }) {
             })}
 
             <div className="doctor-notes-box">
-              <label className="form-label" style={{ fontSize: '0.85rem' }}>Clinician Notes & Verification Sign-Off</label>
+              <label className="form-label" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>Clinician Verification & Notes</label>
               <textarea 
                 className="field-textarea" 
-                style={{ minHeight: '60px' }} 
-                placeholder="Enter clinician notes here..." 
+                style={{ minHeight: '65px' }} 
+                placeholder="Enter clinician sign-off notes here..." 
                 value={doctorNotes} 
                 onChange={e => setDoctorNotes(e.target.value)} 
               />
             </div>
 
             {/* ABDM Push Log & Retry Button */}
-            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--panel-border)' }}>
+            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1.5px solid #f1f5f9' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>ABDM FHIR Export Status</span>
-                <button type="button" className="btn-primary" style={{ padding: '0.35rem 0.8rem', width: 'auto', fontSize: '0.8rem' }} onClick={handleRetryAbdmPush}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>ABDM FHIR Export Status</span>
+                <button type="button" className="btn-primary" style={{ padding: '0.4rem 0.9rem', width: 'auto', fontSize: '0.82rem' }} onClick={handleRetryAbdmPush}>
                   Retry ABDM Push
                 </button>
               </div>
               {abdmLogs.length > 0 && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
-                  Latest Status: <strong style={{ color: 'var(--success-text)' }}>{abdmLogs[0].status.toUpperCase()}</strong> ({abdmLogs[0].attempted_at})
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                  Latest Status: <strong style={{ color: '#059669' }}>{abdmLogs[0].status.toUpperCase()}</strong> ({abdmLogs[0].attempted_at})
                 </div>
               )}
             </div>

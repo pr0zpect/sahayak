@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { startInterview, respondInterview, uploadDocument, generateSummary, pushAbdm, grantConsent } from '../api';
 import { 
   Mic, MicOff, Send, AlertTriangle, UploadCloud, CheckCircle2, 
-  Volume2, VolumeX, ShieldCheck, ArrowRight, Activity, Leaf, ShieldAlert, Info 
+  Volume2, VolumeX, ShieldCheck, ArrowRight, Activity, Leaf, ShieldAlert, Sparkles, User, Stethoscope 
 } from 'lucide-react';
 
 export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSessionComplete }) {
@@ -96,7 +96,6 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       setChips(data.chips || []);
       setChatHistory([{ turn: 1, speaker: 'ai', text: data.question }]);
       
-      // Grant DPDP Consent Record
       await grantConsent(data.session_id, consentScope).catch(() => {});
 
       setStep(2);
@@ -263,7 +262,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
           <span className="step-number">2</span> {mode === 'ayush' ? 'AYUSH Intake' : 'Interview'}
         </div>
         <div className={`step-pill ${step === 3 ? 'active' : step > 3 ? 'completed' : ''}`}>
-          <span className="step-number">3</span> OCR & Clinical Flags
+          <span className="step-number">3</span> OCR & Safety
         </div>
         <div className={`step-pill ${step === 4 ? 'active' : ''}`}>
           <span className="step-number">4</span> Review & ABDM
@@ -273,34 +272,43 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       {/* STEP 1: Mode Selection & DPDP Act 2023 Consent */}
       {step === 1 && (
         <form onSubmit={handleStartSession} className="consent-form">
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', marginBottom: '0.25rem', textAlign: 'center' }}>
-            MediKiosk Clinical Intake
-          </h2>
-          <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Select intake mode, preferred language, and privacy preferences
-          </p>
+          <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+            <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem auto', color: '#2563eb' }}>
+              <Sparkles size={32} />
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+              Welcome to MediKiosk
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.94rem', marginTop: '0.2rem' }}>
+              Adaptive pre-consultation intake & digital health records integration
+            </p>
+          </div>
 
           {/* Mode Switcher */}
           <div className="form-group">
-            <label className="form-label">Clinical Intake Mode</label>
+            <label className="form-label">Select Intake Care Model</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
               <div 
                 className={`summary-card-field ${mode === 'allopathic' ? 'active-source' : ''}`}
                 onClick={() => setMode('allopathic')}
-                style={{ padding: '0.85rem', cursor: 'pointer', textAlign: 'center' }}
+                style={{ padding: '1rem', cursor: 'pointer', textAlign: 'center', borderRadius: '18px', background: mode === 'allopathic' ? '#eff6ff' : '#f8fafc', borderColor: mode === 'allopathic' ? '#2563eb' : '#e2e8f0' }}
               >
-                <Activity size={22} color="#6366f1" style={{ margin: '0 auto 0.4rem auto' }} />
-                <strong style={{ color: 'white', display: 'block', fontSize: '0.95rem' }}>Allopathic Medicine</strong>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Standard SOCRATES OPD History</span>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem auto' }}>
+                  <Activity size={22} />
+                </div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '1rem', fontWeight: 700 }}>Allopathic OPD</strong>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>SOCRATES History Taking</span>
               </div>
               <div 
                 className={`summary-card-field ${mode === 'ayush' ? 'active-source' : ''}`}
                 onClick={() => setMode('ayush')}
-                style={{ padding: '0.85rem', cursor: 'pointer', textAlign: 'center' }}
+                style={{ padding: '1rem', cursor: 'pointer', textAlign: 'center', borderRadius: '18px', background: mode === 'ayush' ? '#ecfdf5' : '#f8fafc', borderColor: mode === 'ayush' ? '#10b981' : '#e2e8f0' }}
               >
-                <Leaf size={22} color="#10b981" style={{ margin: '0 auto 0.4rem auto' }} />
-                <strong style={{ color: 'white', display: 'block', fontSize: '0.95rem' }}>AYUSH (Ayurvedic)</strong>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Dashavidha Pariksha & Agni</span>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem auto' }}>
+                  <Leaf size={22} />
+                </div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '1rem', fontWeight: 700 }}>AYUSH OPD</strong>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Dashavidha Pariksha & Agni</span>
               </div>
             </div>
           </div>
@@ -318,7 +326,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
           </div>
 
           <div className="form-group">
-            <label className="form-label">Language</label>
+            <label className="form-label">Preferred Interview Language</label>
             <select className="form-select" value={language} onChange={e => setLanguage(e.target.value)}>
               <option value="en">English</option>
               <option value="hi">Hindi (हिंदी)</option>
@@ -341,21 +349,21 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
           </div>
 
           <div className="consent-box">
-            <strong style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-              <ShieldCheck size={16} color="#10b981" /> DPDP Act 2023 Consent Declaration
+            <strong style={{ color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', fontWeight: 700 }}>
+              <ShieldCheck size={18} color="#10b981" /> DPDP Act 2023 Consent Declaration
             </strong>
             I grant permission for MediKiosk to record my clinical history, digitize attached prescriptions via OCR, and share structured records with the attending clinician and India ABDM network. I retain the right to revoke consent at any time.
           </div>
 
-          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <input 
               type="checkbox" 
               id="consent-check" 
               checked={consentGiven} 
               onChange={e => setConsentGiven(e.target.checked)} 
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }} 
+              style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#2563eb' }} 
             />
-            <label htmlFor="consent-check" style={{ cursor: 'pointer', fontSize: '0.9rem', color: 'white' }}>
+            <label htmlFor="consent-check" style={{ cursor: 'pointer', fontSize: '0.92rem', color: '#0f172a', fontWeight: 600 }}>
               I agree to the DPDP Act 2023 data processing scope
             </label>
           </div>
@@ -375,17 +383,23 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       {/* STEP 2: Interactive Interview Loop */}
       {step === 2 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Session #{activeSessionId} — [{mode.toUpperCase()}] Patient: <strong style={{ color: 'white' }}>{patientName}</strong>
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <User size={18} color="#2563eb" />
+              <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>
+                Patient: {patientName}
+              </span>
+              <span style={{ fontSize: '0.75rem', background: mode === 'ayush' ? '#ecfdf5' : '#eff6ff', color: mode === 'ayush' ? '#065f46' : '#1e40af', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                {mode.toUpperCase()} MODE
+              </span>
+            </div>
             <button 
               type="button" 
               className="tts-toggle" 
               onClick={() => setTtsEnabled(!ttsEnabled)}
             >
-              {ttsEnabled ? <Volume2 size={18} color="#06b6d4" /> : <VolumeX size={18} />}
-              <span>{ttsEnabled ? 'Voice Playback ON' : 'Voice Playback OFF'}</span>
+              {ttsEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              <span>{ttsEnabled ? 'Voice ON' : 'Voice OFF'}</span>
             </button>
           </div>
 
@@ -394,10 +408,10 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               {chatHistory.map((item, idx) => (
                 <div key={idx} className={`chat-bubble ${item.speaker}`}>
                   <div className="speaker-badge">
-                    <span>{item.speaker === 'ai' ? (mode === 'ayush' ? 'AYUSH Assistant' : 'AI Assistant') : patientName}</span>
+                    <span>{item.speaker === 'ai' ? (mode === 'ayush' ? 'AYUSH Assistant' : 'AI Clinical Assistant') : patientName}</span>
                     <span className="turn-badge">Turn {item.turn}</span>
                     {item.inputMode && (
-                      <span className="turn-badge" style={{ background: 'rgba(6, 182, 212, 0.25)', color: '#67e8f9' }}>
+                      <span className="turn-badge" style={{ background: item.speaker === 'patient' ? 'rgba(255, 255, 255, 0.25)' : '#e0f2fe', color: item.speaker === 'patient' ? 'white' : '#0369a1' }}>
                         {item.inputMode}
                       </span>
                     )}
@@ -413,8 +427,12 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <div ref={chatEndRef} />
             </div>
 
+            {/* Quick Reply Symptom Chips */}
             {chips.length > 0 && (
               <div className="chips-container">
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px', fontWeight: 700 }}>
+                  Quick replies:
+                </span>
                 {chips.map((chip, idx) => (
                   <button 
                     key={idx} 
@@ -436,7 +454,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <input 
                 type="text" 
                 className="chat-text-input" 
-                placeholder={isListening ? 'Listening...' : 'Type your answer or tap mic...'} 
+                placeholder={isListening ? 'Listening to your voice...' : 'Type your response here or tap mic...'} 
                 value={inputAnswer}
                 onChange={(e) => setInputAnswer(e.target.value)}
                 disabled={isLoading}
@@ -445,8 +463,9 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                 type="button" 
                 className={`mic-btn ${isListening ? 'listening' : ''}`}
                 onClick={toggleVoiceInput}
+                title="Voice Input (Web Speech API)"
               >
-                {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                {isListening ? <MicOff size={22} /> : <Mic size={22} />}
               </button>
               <button type="submit" className="send-btn" disabled={!inputAnswer.trim() || isLoading}>
                 <span>Send</span>
@@ -460,31 +479,34 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       {/* STEP 3: Document OCR Upload & Clinical Safety Flags */}
       {step === 3 && (
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', marginBottom: '0.4rem', textAlign: 'center' }}>
-            Prescription OCR & Clinical Safety Scan
+          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.4rem', textAlign: 'center', color: '#0f172a' }}>
+            Prescription Digitization & Safety Check
           </h3>
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
-            Digitize handwritten/printed reports and scan for lab abnormal values or drug interactions
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.92rem' }}>
+            Scan paper reports to extract structured medicines and detect potential drug interactions or lab alerts
           </p>
 
           <label className="upload-dropzone">
             <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-            <UploadCloud size={40} color="#6366f1" style={{ margin: '0 auto 0.5rem auto' }} />
-            <div style={{ fontWeight: 700, color: 'white' }}>
-              {isUploading ? 'Scanning document & running safety checks...' : 'Upload Prescription or Lab Report Image'}
+            <UploadCloud size={44} color="#2563eb" style={{ margin: '0 auto 0.6rem auto' }} />
+            <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.05rem' }}>
+              {isUploading ? 'Scanning document & running safety checks...' : 'Click to Upload Prescription or Lab Report'}
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+              Supports camera snapshots, PNG, or JPG images
             </div>
           </label>
 
           {/* Clinical Safety Flags Alert Panel */}
           {clinicalFlags.length > 0 && (
-            <div style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 'var(--radius-md)', padding: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ color: 'var(--warning-text)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                <ShieldAlert size={18} /> Clinical Safety Alerts ({clinicalFlags.length} detected)
+            <div style={{ background: 'var(--warning-bg)', border: '1.5px solid var(--warning-border)', borderRadius: 'var(--radius-md)', padding: '1.1rem', marginBottom: '1.5rem' }}>
+              <div style={{ color: 'var(--warning-text)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.6rem', fontSize: '0.95rem' }}>
+                <ShieldAlert size={20} /> Clinical Safety Alerts ({clinicalFlags.length} detected)
               </div>
               {clinicalFlags.map((flag, idx) => (
-                <div key={idx} style={{ fontSize: '0.85rem', color: 'white', marginBottom: '0.35rem' }}>
+                <div key={idx} style={{ fontSize: '0.88rem', color: '#0f172a', marginBottom: '0.4rem', background: '#ffffff', padding: '0.6rem 0.9rem', borderRadius: '10px', border: '1px solid #fde68a' }}>
                   {flag.flag_type === 'abnormal_value' ? (
-                    <span>⚠️ <strong>{flag.detail.test_name}:</strong> Value {flag.detail.value} (Ref: {flag.detail.reference_range}) — Status: {flag.detail.status}</span>
+                    <span>⚠️ <strong>{flag.detail.test_name}:</strong> Value {flag.detail.value} (Ref: {flag.detail.reference_range}) — Status: <strong style={{ color: '#dc2626' }}>{flag.detail.status}</strong></span>
                   ) : (
                     <span>🚫 <strong>Drug Interaction:</strong> {flag.detail.interacting_pair?.join(' + ')} — {flag.detail.description}</span>
                   )}
@@ -495,13 +517,13 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
 
           {uploadedDocs.length > 0 && (
             <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ fontSize: '0.9rem', color: 'var(--accent)', marginBottom: '0.5rem' }}>
-                Scanned Prescriptions ({uploadedDocs.length})
+              <h4 style={{ fontSize: '0.92rem', color: 'var(--primary)', marginBottom: '0.6rem', fontWeight: 800 }}>
+                Scanned Prescription Data ({uploadedDocs.length})
               </h4>
               {uploadedDocs.map((doc, i) => (
                 <div key={i} className="ocr-result-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ color: 'white' }}>Doc #{doc.document_id} ({doc.ocr_method})</strong>
+                    <strong style={{ color: '#0f172a' }}>Doc #{doc.document_id} ({doc.ocr_method})</strong>
                     <span className={`confidence-badge ${doc.confidence >= 0.6 ? 'confidence-high' : 'confidence-low'}`}>
                       {doc.confidence < 0.6 && <AlertTriangle size={14} />}
                       Confidence: {(doc.confidence * 100).toFixed(0)}%
@@ -518,7 +540,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
             onClick={handleProceedToSummary}
             disabled={isLoading}
           >
-            {isLoading ? 'Generating Summary...' : 'Generate Clinical Summary'}
+            {isLoading ? 'Generating Summary...' : 'Generate Structured Clinical Summary'}
             <ArrowRight size={18} />
           </button>
         </div>
@@ -527,31 +549,31 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       {/* STEP 4: Review Summary & Real ABDM Push */}
       {step === 4 && (
         <div style={{ maxWidth: '750px', margin: '0 auto' }}>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>
-            Intake Completed — [{mode.toUpperCase()}] Clinical Summary
+          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.5rem', textAlign: 'center', color: '#0f172a' }}>
+            Intake Completed — [{mode.toUpperCase()}] Summary
           </h3>
 
           {summaryData && (
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--panel-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 'var(--radius-md)', padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700 }}>Chief Complaint</div>
-                  <div style={{ color: 'white', fontWeight: 600 }}>{summaryData.chief_complaint?.text || 'Not reported.'}</div>
+                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--primary)', fontWeight: 800, letterSpacing: '0.5px' }}>Chief Complaint</div>
+                  <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.02rem', marginTop: '0.2rem' }}>{summaryData.chief_complaint?.text || 'Not reported.'}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700 }}>HPI</div>
-                  <div style={{ color: 'white', fontWeight: 600 }}>{summaryData.hpi?.text || 'Not reported.'}</div>
+                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--primary)', fontWeight: 800, letterSpacing: '0.5px' }}>History of Present Illness (HPI)</div>
+                  <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.02rem', marginTop: '0.2rem' }}>{summaryData.hpi?.text || 'Not reported.'}</div>
                 </div>
               </div>
 
               {/* AYUSH Assessment Block if mode === 'ayush' */}
               {mode === 'ayush' && (
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginTop: '1rem' }}>
-                  <h4 style={{ fontSize: '0.85rem', color: '#6ee7b7', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.5rem' }}>
-                    AYUSH Dashavidha Pariksha Block
+                <div style={{ background: '#ecfdf5', border: '1.5px solid #a7f3d0', padding: '1.1rem', borderRadius: '16px', marginTop: '1rem' }}>
+                  <h4 style={{ fontSize: '0.88rem', color: '#065f46', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.6rem', letterSpacing: '0.5px' }}>
+                    AYUSH Dashavidha Pariksha Summary Block
                   </h4>
-                  <div style={{ fontSize: '0.88rem', color: 'white' }}>
-                    <div><strong>Prakriti:</strong> {summaryData.prakriti_assessment?.text}</div>
+                  <div style={{ fontSize: '0.92rem', color: '#0f172a', lineHeight: 1.6 }}>
+                    <div><strong>Prakriti Assessment:</strong> {summaryData.prakriti_assessment?.text}</div>
                     <div><strong>Agni / Koshtha:</strong> {summaryData.agni_koshtha?.text}</div>
                     <div><strong>Ahara & Vihara:</strong> {summaryData.ahara_vihara_habits?.text}</div>
                   </div>
@@ -572,10 +594,10 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <ShieldCheck size={20} />
             </button>
           ) : (
-            <div style={{ textAlign: 'center', background: 'var(--success-bg)', border: '1px solid var(--success-border)', borderRadius: 'var(--radius-md)', padding: '1.5rem' }}>
-              <CheckCircle2 size={40} color="#10b981" style={{ margin: '0 auto 0.5rem auto' }} />
-              <h4 style={{ color: 'white', fontSize: '1.2rem' }}>Pushed to India ABDM Health Network</h4>
-              <p style={{ color: 'var(--success-text)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            <div style={{ textAlign: 'center', background: 'var(--success-bg)', border: '1.5px solid var(--success-border)', borderRadius: 'var(--radius-md)', padding: '1.75rem' }}>
+              <CheckCircle2 size={46} color="#10b981" style={{ margin: '0 auto 0.6rem auto' }} />
+              <h4 style={{ color: '#065f46', fontSize: '1.3rem', fontWeight: 800 }}>Pushed to India ABDM Health Network</h4>
+              <p style={{ color: '#047857', fontSize: '0.95rem', marginBottom: '1.25rem', fontWeight: 600 }}>
                 ABHA ID: <strong>{abdmResult.abha_id}</strong>
               </p>
               <button type="button" className="btn-primary" onClick={handleResetSession}>
