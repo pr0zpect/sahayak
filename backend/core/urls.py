@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     AbdmAuthView, ConsentGrantView, ConsentRevokeView, DocumentUploadView,
     InterviewRespondView, InterviewStartView, LoginView, MockAbdmPushView,
-    RedFlagCheckView, SummaryDetailView, SummaryGenerateView
+    RedFlagCheckView, SummaryDetailView, SummaryGenerateView,
+    TokenGenerateView, TokenLookupView, TokenValidateView, TokenRejectionStatusView,
 )
 
 urlpatterns = [
@@ -18,4 +19,10 @@ urlpatterns = [
     path("abdm/push/", MockAbdmPushView.as_view()),
     path("mock-abdm/push/", MockAbdmPushView.as_view()),
     path("auth/login/", LoginView.as_view()),
+    # Token & Receptionist Validation
+    # Sub-paths MUST come before the generic token/<str:token>/ catch-all
+    path("token/generate/", TokenGenerateView.as_view()),
+    path("token/<str:token>/validate/", TokenValidateView.as_view()),
+    path("token/<str:token>/rejection-status/", TokenRejectionStatusView.as_view()),
+    path("token/<str:token>/", TokenLookupView.as_view()),
 ]

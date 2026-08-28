@@ -88,3 +88,21 @@ class SummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Summary
         fields = ("structured_json", "edited_by_doctor", "doctor_notes", "created_at", "updated_at")
+
+
+class TokenGenerateSerializer(serializers.Serializer):
+    session_id = serializers.IntegerField(min_value=1)
+
+
+class TokenValidateSerializer(serializers.Serializer):
+    VALID_REASONS = ["unclear_complaint", "incomplete_document", "needs_reinterview", "other"]
+
+    action = serializers.ChoiceField(choices=["approve", "reject"])
+    reason = serializers.ChoiceField(choices=VALID_REASONS, required=False, allow_null=True)
+
+    def validate(self, data):
+        if data["action"] == "reject" and not data.get("reason"):
+            raise serializers.ValidationError(
+                {"reason": "A rejection reason is required when action is 'reject'."}
+            )
+        return data

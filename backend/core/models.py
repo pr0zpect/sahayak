@@ -18,9 +18,22 @@ class Session(models.Model):
         AWAITING_SUMMARY = "awaiting_summary", "Awaiting summary"
         SUMMARY_READY = "summary_ready", "Summary ready"
         DOCTOR_REVIEWED = "doctor_reviewed", "Doctor reviewed"
+
     class Mode(models.TextChoices):
         ALLOPATHIC = "allopathic", "Allopathic"
         AYUSH = "ayush", "AYUSH (Ayurvedic)"
+
+    class TokenStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    REJECTION_REASONS = [
+        ("unclear_complaint", "Unclear Complaint"),
+        ("incomplete_document", "Incomplete Document"),
+        ("needs_reinterview", "Needs Re-interview"),
+        ("other", "Other"),
+    ]
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="sessions")
     mode = models.CharField(max_length=20, choices=Mode.choices, default=Mode.ALLOPATHIC)
@@ -28,6 +41,19 @@ class Session(models.Model):
     red_flag = models.BooleanField(default=False)
     red_flag_reason = models.TextField(null=True, blank=True)
     pushed_to_abdm = models.BooleanField(default=False)
+
+    # Token & receptionist validation fields
+    token = models.CharField(max_length=10, null=True, blank=True, unique=True)
+    token_status = models.CharField(
+        max_length=20, choices=TokenStatus.choices, null=True, blank=True
+    )
+    token_generated_at = models.DateTimeField(null=True, blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    needed_clarification = models.BooleanField(default=False)
+    rejection_reason = models.CharField(
+        max_length=50, choices=REJECTION_REASONS, null=True, blank=True
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

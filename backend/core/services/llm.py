@@ -91,22 +91,27 @@ def get_next_question(transcript, mode="allopathic"):
     result = _ask(
         f"Interview transcript so far: {json.dumps(transcript)}. "
         f"Do NOT repeat any of these previously asked questions: {json.dumps(asked_questions)}. "
-        f"Ask the single next logical SOCRATES intake question. "
-        f"If 4 or more questions have been answered, return {{\"question\":null,\"chips\":[],\"done\":true}}; "
-        f"otherwise return {{\"question\":str,\"chips\":[str],\"done\":false}}.",
+        f"If the patient's most recent answer is clearly unrelated to any medical symptom, unclear, or nonsensical "
+        f"(e.g. random letters, completely off-topic, gibberish), do NOT treat it as clinical data — "
+        f"instead generate a polite clarifying question asking the patient to restate their symptom, "
+        f"and set \"needs_clarification\": true in your response. "
+        f"Otherwise ask the single next logical SOCRATES intake question. "
+        f"If 4 or more patient answers are present and all are valid, return {{\"question\":null,\"chips\":[],\"done\":true,\"needs_clarification\":false}}; "
+        f"otherwise return {{\"question\":str,\"chips\":[str],\"done\":false,\"needs_clarification\":bool}}.",
         default_fallback
     )
 
     q = result.get("question")
     done = bool(result.get("done", False))
+    needs_clarification = bool(result.get("needs_clarification", False))
 
     if q and q.strip().lower() in asked_questions:
         for fb in allopathic_fallbacks:
             if fb["question"].strip().lower() not in asked_questions:
-                return fb
-        return {"question": None, "chips": [], "done": True}
+                return {**fb, "needs_clarification": False}
+        return {"question": None, "chips": [], "done": True, "needs_clarification": False}
 
-    return {"question": q, "chips": result.get("chips", []), "done": done}
+    return {"question": q, "chips": result.get("chips", []), "done": done, "needs_clarification": needs_clarification}
 
 
 def check_red_flag(text, mode="allopathic"):

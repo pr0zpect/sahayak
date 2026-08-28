@@ -1,3 +1,5 @@
+import random
+import string
 import uuid
 from django.contrib.auth import authenticate
 from django.db.models import Max
@@ -12,7 +14,8 @@ from .serializers import (
     ABDMPushLogSerializer, AbdmAuthSerializer, ClinicalFlagSerializer, ConsentRecordSerializer,
     ConsentRevokeSerializer, ConsentSerializer, DocumentSerializer, LoginSerializer,
     RedFlagSerializer, RespondSerializer, SessionIdSerializer, StartInterviewSerializer,
-    SummaryPatchSerializer, SummarySerializer, TranscriptSerializer, UploadDocumentSerializer
+    SummaryPatchSerializer, SummarySerializer, TokenGenerateSerializer, TokenValidateSerializer,
+    TranscriptSerializer, UploadDocumentSerializer
 )
 from .services import abdm, clinical_checks, llm, ocr, redflag_rules
 
@@ -97,6 +100,9 @@ class InterviewRespondView(APIView):
             })
 
         text = next_item.get("question") or "Could you describe when this started and how severe it is?"
+        # Detect and store clarification flag — once set it remains set for the session
+        if next_item.get("needs_clarification") and not session.needed_clarification:
+            session.needed_clarification = True
         Transcript.objects.create(session=session, turn=_next_turn(session), speaker="ai", text=text)
         session.save()
 
@@ -269,3 +275,150 @@ class LoginView(APIView):
             return Response({"detail": "Invalid credentials."}, status=400)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key})
+
+
+def _generate_token_str():
+    """Generate a unique 6-char uppercase alphanumeric token string."""
+    chars = string.ascii_uppercase + string.digits
+    for _ in range(20):  # retry loop to guarantee uniqueness
+        candidate = "".join(random.choices(chars, k=6))
+        if not Session.objects.filter(token=candidate).exists():
+            return candidate
+    raise ValueError("Could not generate unique token after 20 attempts")
+
+
+class TokenGenerateView(APIView):
+    """
+    POST /api/token/generate/
+    Generates a 6-char session token once the summary is ready.
+    No authentication required — the patient kiosk calls this.
+    """
+    def post(self, request):
+        form = TokenGenerateSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        session = _session(form.validated_data["session_id"])
+        if not session:
+            return Response({"detail": "Session not found."}, status=404)
+
+        # Precondition: summary must already exist
+        if session.status not in (Session.Status.SUMMARY_READY, Session.Status.DOCTOR_REVIEWED):
+            return Response(
+                {"detail": "Summary has not been generated yet. Please generate the summary first."},
+                status=400
+            )
+
+        # If a token already exists for this session, return it (idempotent)
+        if session.token:
+            return Response({
+                "token": session.token,
+                "priority": session.red_flag,
+                "expires_at": session.token_expires_at,
+            })
+
+        now = timezone.now()
+        tok = _generate_token_str()
+        session.token = tok
+        session.token_status = Session.TokenStatus.PENDING
+        session.token_generated_at = now
+        session.token_expires_at = now + timezone.timedelta(minutes=15)
+        session.save(update_fields=["token", "token_status", "token_generated_at", "token_expires_at", "updated_at"])
+
+        return Response({
+            "token": session.token,
+            "priority": session.red_flag,
+            "expires_at": session.token_expires_at,
+        })
+
+
+class TokenLookupView(APIView):
+    """
+    GET /api/token/<token>/
+    Condensed receptionist view. Requires authentication.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, token):
+        try:
+            session = Session.objects.get(token=token)
+        except Session.DoesNotExist:
+            return Response({"detail": "Token not found."}, status=404)
+
+        # Pull chief complaint from summary if available
+        chief_complaint = ""
+        try:
+            sj = session.summary.structured_json
+            chief_complaint = sj.get("chief_complaint", {}).get("text", "") or ""
+        except (Summary.DoesNotExist, AttributeError):
+            pass
+
+        expired = (
+            session.token_expires_at is not None
+            and timezone.now() > session.token_expires_at
+        )
+
+        return Response({
+            "session_id": session.id,
+            "patient_name": session.patient.name,
+            "chief_complaint": chief_complaint,
+            "priority": session.red_flag,
+            "red_flag_reason": session.red_flag_reason or "",
+            "needed_clarification": session.needed_clarification,
+            "token_status": session.token_status,
+            "expired": expired,
+        })
+
+
+class TokenValidateView(APIView):
+    """
+    PATCH /api/token/<token>/validate/
+    Receptionist approves or rejects a token. Requires authentication.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, token):
+        try:
+            session = Session.objects.get(token=token)
+        except Session.DoesNotExist:
+            return Response({"detail": "Token not found."}, status=404)
+
+        form = TokenValidateSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        action = form.validated_data["action"]
+        reason = form.validated_data.get("reason", None)
+
+        if action == "approve":
+            session.token_status = Session.TokenStatus.APPROVED
+            session.rejection_reason = None
+        elif action == "reject":
+            session.token_status = Session.TokenStatus.REJECTED
+            session.rejection_reason = reason
+
+        session.save(update_fields=["token_status", "rejection_reason", "updated_at"])
+
+        return Response({
+            "token": session.token,
+            "token_status": session.token_status,
+            "rejection_reason": session.rejection_reason,
+            "session_id": session.id,
+            "patient_name": session.patient.name,
+        })
+
+
+class TokenRejectionStatusView(APIView):
+    """
+    GET /api/token/<token>/rejection-status/
+    Unauthenticated endpoint — patient kiosk polls this to check for rejection.
+    """
+    # No permission_classes — intentionally public so the patient kiosk can poll without auth
+
+    def get(self, request, token):
+        try:
+            session = Session.objects.get(token=token)
+        except Session.DoesNotExist:
+            return Response({"detail": "Token not found."}, status=404)
+
+        return Response({
+            "token": session.token,
+            "token_status": session.token_status,
+            "rejection_reason": session.rejection_reason,
+        })

@@ -5,7 +5,14 @@ from .models import Document, Patient, Session, Summary, Transcript
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin): list_display = ("id", "name", "language", "abha_id", "created_at")
 @admin.register(Session)
-class SessionAdmin(admin.ModelAdmin): list_display = ("id", "patient", "status", "red_flag", "pushed_to_abdm", "created_at")
+class SessionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "patient", "status", "mode", "red_flag",
+        "token", "token_status", "needed_clarification",
+        "token_expires_at", "pushed_to_abdm", "created_at",
+    )
+    list_filter = ("status", "mode", "red_flag", "token_status", "needed_clarification")
+    search_fields = ("patient__name", "token")
 @admin.register(Transcript)
 class TranscriptAdmin(admin.ModelAdmin): list_display = ("id", "session", "turn", "speaker", "input_mode", "timestamp")
 @admin.register(Document)
