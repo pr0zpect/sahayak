@@ -121,6 +121,23 @@ def get_next_question(transcript, mode="allopathic"):
     fallback_idx = min(patient_answers, len(allopathic_fallbacks) - 1)
     default_fallback = _format_fallback(allopathic_fallbacks[fallback_idx])
 
+    stated_complaint = None
+    allowed_dimensions_str = "the standard clinical dimensions for their complaint"
+    if mode == "allopathic":
+        for t in transcript:
+            if t.get("speaker") == "patient":
+                ans = t.get("text", "").lower()
+                for key in ALLOPATHIC_ONTOLOGY:
+                    if key in ans:
+                        stated_complaint = key
+                        break
+                if stated_complaint:
+                    break
+        if stated_complaint:
+            dims = ALLOPATHIC_ONTOLOGY[stated_complaint]
+            allowed_dimensions_str = f"the specific dimension list for '{stated_complaint}': {json.dumps(dims)}"
+
+    complaint_mention = f"The patient's stated complaint is '{stated_complaint}'. " if stated_complaint else ""
     prompt = (
         f"Interview transcript so far: {json.dumps(transcript)}. "
         f"Do NOT repeat any of these previously asked questions: {json.dumps(asked_questions)}. "
@@ -129,16 +146,20 @@ def get_next_question(transcript, mode="allopathic"):
         f"Instead, generate a polite clarifying question asking the patient to restate their symptom, "
         f"include relevant options where sensible (e.g. 'It is about my current visit', 'I want to say something else'), "
         f"and YOU MUST set \"needs_clarification\": true in your response. "
-        f"Otherwise, ask exactly one clinically relevant next question chosen from the ontology dimensions for the patient's stated complaint "
-        f"that has not yet been covered. "
+        f"Otherwise, ask exactly one clinically relevant next question that has not yet been covered. "
+        f"{complaint_mention}"
+        f"You MUST ONLY ask about dimensions from {allowed_dimensions_str}. "
+        f"Do not ask about body location, radiation, or any other dimension NOT explicitly listed for this specific complaint — "
+        f"for example, fever, cough, and abdominal pain each have their own distinct relevant dimensions and you must respect them exactly as given, "
+        f"not reuse a pattern from a different complaint type. "
         f"ALWAYS include 3-5 short, mutually exclusive, tappable answer options specific to that exact question in the 'chips' array "
         f"(e.g. for a 'how long' question -> ['Today', '2-3 days', 'About a week', 'More than a week']; "
         f"for a 'where exactly' question -> ['Center of chest', 'Left side', 'Right side', 'Spreads to arm/jaw']; "
         f"for a 'how severe' question -> ['Mild', 'Moderate', 'Severe', 'Worst pain I\\'ve felt']). "
         f"NEVER return an empty 'chips' array for a substantive question. "
         f"Judge, using the full transcript so far, whether enough clinically useful information now exists to produce a usable Chief Complaint and HPI "
-        f"(onset, duration, severity, and at least one more relevant dimension covered). "
-        f"If yes, stop asking ontology questions and instead return exactly this JSON: {{\"is_closing\":true}}. "
+        f"by evaluating coverage against THE STATED COMPLAINT'S OWN DIMENSION LIST, not a generic checklist. "
+        f"If the relevant dimensions are adequately covered, stop asking ontology questions and instead return exactly this JSON: {{\"is_closing\":true}}. "
         f"Otherwise, return JSON like this: {{\"question\":str,\"chips\":[str],\"needs_clarification\":bool,\"is_closing\":false}}."
     )
 
