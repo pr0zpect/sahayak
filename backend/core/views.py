@@ -17,7 +17,7 @@ from .serializers import (
     SummaryPatchSerializer, SummarySerializer, TokenGenerateSerializer, TokenValidateSerializer,
     TranscriptSerializer, UploadDocumentSerializer
 )
-from .services import abdm, clinical_checks, llm, ocr, redflag_rules
+from .services import abdm, clinical_checks, drug_interactions, llm, ocr, redflag_rules
 
 
 def _session(pk):
@@ -146,13 +146,18 @@ class DocumentUploadView(APIView):
         # Run clinical safety checks (abnormal lab values & drug interactions)
         flags = clinical_checks.analyze_document_fields(session, doc, doc.extracted_fields)
 
+        # Run drug-interaction check on extracted medicines (rule-based, no LLM)
+        medicines = doc.extracted_fields.get("medicines", []) or []
+        interaction_alerts = drug_interactions.check_interactions(medicines)
+
         return Response({
             "document_id": doc.id,
             "extracted_text": doc.extracted_text,
             "fields": doc.extracted_fields,
             "confidence": doc.confidence,
             "ocr_method": doc.ocr_method,
-            "clinical_flags": ClinicalFlagSerializer(flags, many=True).data
+            "clinical_flags": ClinicalFlagSerializer(flags, many=True).data,
+            "interaction_alerts": interaction_alerts,
         }, status=201)
 
 

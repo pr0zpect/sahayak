@@ -41,6 +41,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
   // OCR & Clinical Safety Flags State
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [clinicalFlags, setClinicalFlags] = useState([]);
+  const [interactionAlerts, setInteractionAlerts] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
   // Summary & ABDM State
@@ -184,6 +185,9 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       if (docRes.clinical_flags) {
         setClinicalFlags(prev => [...prev, ...docRes.clinical_flags]);
       }
+      if (docRes.interaction_alerts) {
+        setInteractionAlerts(prev => [...prev, ...docRes.interaction_alerts]);
+      }
     } catch (err) {
       alert('Failed to upload document.');
     } finally {
@@ -230,6 +234,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
     setRedFlagReason('');
     setUploadedDocs([]);
     setClinicalFlags([]);
+    setInteractionAlerts([]);
     setSummaryData(null);
     setAbdmResult(null);
     setToastMessage(null);
@@ -520,17 +525,81 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <h4 style={{ fontSize: '0.92rem', color: 'var(--primary)', marginBottom: '0.6rem', fontWeight: 800 }}>
                 Scanned Prescription Data ({uploadedDocs.length})
               </h4>
-              {uploadedDocs.map((doc, i) => (
-                <div key={i} className="ocr-result-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ color: '#0f172a' }}>Doc #{doc.document_id} ({doc.ocr_method})</strong>
-                    <span className={`confidence-badge ${doc.confidence >= 0.6 ? 'confidence-high' : 'confidence-low'}`}>
-                      {doc.confidence < 0.6 && <AlertTriangle size={14} />}
-                      Confidence: {(doc.confidence * 100).toFixed(0)}%
-                    </span>
+              {uploadedDocs.map((doc, i) => {
+                const conf = doc.confidence ?? 0;
+                const confPct = (conf * 100).toFixed(0);
+                const confBadge = conf >= 0.8
+                  ? { label: 'High confidence', bg: '#dcfce7', border: '#86efac', text: '#15803d', icon: '✓' }
+                  : conf >= 0.5
+                  ? { label: 'Medium confidence — please verify', bg: '#fef9c3', border: '#fde047', text: '#a16207', icon: '!' }
+                  : { label: 'Low confidence — please confirm manually', bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c', icon: '⚠' };
+                return (
+                  <div key={i} className="ocr-result-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <strong style={{ color: '#0f172a' }}>Doc #{doc.document_id} ({doc.ocr_method})</strong>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 700,
+                        background: confBadge.bg, border: `1.5px solid ${confBadge.border}`, color: confBadge.text
+                      }}>
+                        <span>{confBadge.icon}</span> {confPct}% — {confBadge.label}
+                      </span>
+                    </div>
+                    {doc.fields?.medicines?.length > 0 && (
+                      <div style={{ marginTop: '0.6rem', fontSize: '0.84rem', color: '#475569' }}>
+                        <strong>Medicines:</strong> {doc.fields.medicines.join(', ')}
+                      </div>
+                    )}
+                    {doc.fields?.diagnosis && (
+                      <div style={{ marginTop: '0.3rem', fontSize: '0.84rem', color: '#475569' }}>
+                        <strong>Diagnosis:</strong> {doc.fields.diagnosis}
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Drug Interaction Alert Panel */}
+          {uploadedDocs.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              {interactionAlerts.length > 0 ? (
+                <div style={{ background: '#fffbeb', border: '1.5px solid #fbbf24', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800, color: '#92400e', marginBottom: '0.6rem', fontSize: '0.95rem' }}>
+                    <AlertTriangle size={18} /> {interactionAlerts.length} potential drug interaction{interactionAlerts.length > 1 ? 's' : ''} flagged for clinician review
+                  </div>
+                  {interactionAlerts.map((alert, idx) => (
+                    <div key={idx} style={{
+                      background: '#ffffff', border: '1px solid #fde68a', borderRadius: '10px',
+                      padding: '0.75rem 1rem', marginBottom: '0.5rem', fontSize: '0.87rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                        <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                          {alert.drug_a} <span style={{ color: '#94a3b8' }}>+</span> {alert.drug_b}
+                        </span>
+                        <span style={{
+                          padding: '0.15rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
+                          background: alert.severity === 'high' ? '#fef2f2' : '#fffbeb',
+                          color: alert.severity === 'high' ? '#b91c1c' : '#92400e',
+                          border: `1px solid ${alert.severity === 'high' ? '#fca5a5' : '#fde68a'}`
+                        }}>
+                          {alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)} severity
+                        </span>
+                      </div>
+                      <div style={{ color: '#475569', lineHeight: 1.5 }}>{alert.note}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 'var(--radius-md)',
+                  padding: '0.75rem 1rem', color: '#15803d', fontSize: '0.87rem', fontWeight: 600
+                }}>
+                  <CheckCircle2 size={17} /> No known interactions detected among extracted medicines
+                </div>
+              )}
             </div>
           )}
 
