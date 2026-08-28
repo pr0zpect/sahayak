@@ -28,7 +28,7 @@ def _next_turn(session):
     return (session.transcripts.aggregate(maximum=Max("turn"))["maximum"] or 0) + 1
 
 def _history(session):
-    return [{"turn": t.turn, "speaker": t.speaker, "text": t.text} for t in session.transcripts.all()]
+    return [{"turn": t.turn, "speaker": t.speaker, "text": t.text, "dimension_asked": t.dimension_asked} for t in session.transcripts.all()]
 
 
 class InterviewStartView(APIView):
@@ -47,7 +47,7 @@ class InterviewStartView(APIView):
         question = llm.get_first_question(mode=session.mode)
         text = question.get("question", "What brings you in today?")
 
-        Transcript.objects.create(session=session, turn=1, speaker="ai", text=text, language=data["language"])
+        Transcript.objects.create(session=session, turn=1, speaker="ai", text=text, language=data["language"], dimension_asked=question.get("dimension"))
 
         # Auto-grant initial intake consent record
         ConsentRecord.objects.create(
@@ -108,7 +108,7 @@ class InterviewRespondView(APIView):
         # Detect and store clarification flag — once set it remains set for the session
         if next_item.get("needs_clarification") and not session.needed_clarification:
             session.needed_clarification = True
-        Transcript.objects.create(session=session, turn=_next_turn(session), speaker="ai", text=text)
+        Transcript.objects.create(session=session, turn=_next_turn(session), speaker="ai", text=text, dimension_asked=next_item.get("dimension"))
         session.save()
 
         return Response({

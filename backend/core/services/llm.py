@@ -97,7 +97,8 @@ def get_next_question(transcript, mode="allopathic"):
             "escape_hatch": "Something else / not sure",
             "input_type": "options",
             "done": False,
-            "needs_clarification": False
+            "needs_clarification": False,
+            "dimension": None
         }
 
     if mode == "ayush":
@@ -123,6 +124,8 @@ def get_next_question(transcript, mode="allopathic"):
 
     stated_complaint = None
     allowed_dimensions_str = "the standard clinical dimensions for their complaint"
+    covered_dimensions_str = "None"
+    remaining_dimensions_str = "All"
     if mode == "allopathic":
         for t in transcript:
             if t.get("speaker") == "patient":
@@ -135,12 +138,15 @@ def get_next_question(transcript, mode="allopathic"):
                     break
         if stated_complaint:
             dims = ALLOPATHIC_ONTOLOGY[stated_complaint]
+            covered_dims = [t.get("dimension_asked") for t in transcript if t.get("speaker") == "ai" and t.get("dimension_asked")]
+            remaining_dims = [d for d in dims if d not in covered_dims]
             allowed_dimensions_str = f"the specific dimension list for '{stated_complaint}': {json.dumps(dims)}"
+            covered_dimensions_str = json.dumps(covered_dims) if covered_dims else "None"
+            remaining_dimensions_str = json.dumps(remaining_dims) if remaining_dims else "None (All covered)"
 
     complaint_mention = f"The patient's stated complaint is '{stated_complaint}'. " if stated_complaint else ""
     prompt = (
         f"Interview transcript so far: {json.dumps(transcript)}. "
-        f"Do NOT repeat any of these previously asked questions: {json.dumps(asked_questions)}. "
         f"If the patient's most recent answer is clearly unrelated to a medical symptom, unclear, or nonsensical "
         f"(e.g. random letters like 'asdf', completely off-topic, gibberish), YOU MUST NOT treat it as clinical data. "
         f"Instead, generate a polite clarifying question asking the patient to restate their symptom, "
@@ -148,7 +154,10 @@ def get_next_question(transcript, mode="allopathic"):
         f"and YOU MUST set \"needs_clarification\": true in your response. "
         f"Otherwise, ask exactly one clinically relevant next question that has not yet been covered. "
         f"{complaint_mention}"
-        f"You MUST ONLY ask about dimensions from {allowed_dimensions_str}. "
+        f"Dimensions already covered in this conversation: {covered_dimensions_str}. "
+        f"Remaining uncovered dimensions: {remaining_dimensions_str}. "
+        f"You MUST ONLY ask about ONE of the remaining uncovered dimensions listed above. "
+        f"Do not ask about {covered_dimensions_str} again in any form or phrasing — they have already been covered. "
         f"Do not ask about body location, radiation, or any other dimension NOT explicitly listed for this specific complaint — "
         f"for example, fever, cough, and abdominal pain each have their own distinct relevant dimensions and you must respect them exactly as given, "
         f"not reuse a pattern from a different complaint type. "
@@ -159,8 +168,9 @@ def get_next_question(transcript, mode="allopathic"):
         f"NEVER return an empty 'chips' array for a substantive question. "
         f"Judge, using the full transcript so far, whether enough clinically useful information now exists to produce a usable Chief Complaint and HPI "
         f"by evaluating coverage against THE STATED COMPLAINT'S OWN DIMENSION LIST, not a generic checklist. "
-        f"If the relevant dimensions are adequately covered, stop asking ontology questions and instead return exactly this JSON: {{\"is_closing\":true}}. "
-        f"Otherwise, return JSON like this: {{\"question\":str,\"chips\":[str],\"needs_clarification\":bool,\"is_closing\":false}}."
+        f"If the relevant dimensions are adequately covered (or Remaining uncovered dimensions is 'None (All covered)'), stop asking ontology questions and instead return exactly this JSON: {{\"is_closing\":true}}. "
+        f"Otherwise, return JSON like this: {{\"question\":str,\"chips\":[str],\"needs_clarification\":bool,\"is_closing\":false,\"dimension\":str}} "
+        f"where 'dimension' is the name of the ONE uncovered dimension you are asking about."
     )
 
     result = _ask(prompt, default_fallback)
@@ -199,7 +209,8 @@ def get_next_question(transcript, mode="allopathic"):
         "escape_hatch": "Something else / not sure",
         "input_type": "options",
         "done": False,
-        "needs_clarification": needs_clarification
+        "needs_clarification": needs_clarification,
+        "dimension": result.get("dimension")
     }
 
 

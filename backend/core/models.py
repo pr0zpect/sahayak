@@ -69,6 +69,7 @@ class Transcript(models.Model):
     text = models.TextField()
     language = models.CharField(max_length=10, default="en")
     input_mode = models.CharField(max_length=10, choices=InputMode.choices, null=True, blank=True)
+    dimension_asked = models.CharField(max_length=50, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:

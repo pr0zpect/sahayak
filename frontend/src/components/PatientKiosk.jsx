@@ -477,6 +477,39 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                 <Send size={16} />
               </button>
             </form>
+
+            {/* Generate Summary Now — early exit button, visible from turn 2+ */}
+            {chatHistory.filter(i => i.speaker === 'patient').length >= 1 && (
+              <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={handleProceedToSummary}
+                  disabled={isLoading}
+                  style={{
+                    background: 'transparent',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    padding: '0.5rem 1.25rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#2563eb'; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#64748b'; }}
+                >
+                  <Sparkles size={14} />
+                  {isLoading ? 'Generating Summary...' : 'Generate Summary Now'}
+                </button>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  You can finish early — the doctor will see what's been shared so far.
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
