@@ -248,6 +248,47 @@ def get_next_question(transcript, mode="allopathic", language="en"):
         }
 
     # -----------------------------------------------------------------------
+    # Validate Chief Complaint (Opening & Clarification Turns)
+    # -----------------------------------------------------------------------
+    asked_questions_objs = [t for t in transcript if t.get("speaker") == "ai"]
+    last_ai_turn = asked_questions_objs[-1] if asked_questions_objs else None
+    
+    # If the last question asked was the opening/clarification question (which has no dimension_asked)
+    if last_ai_turn and not last_ai_turn.get("dimension_asked"):
+        last_patient_ans = next((t.get("text", "") for t in reversed(transcript) if t.get("speaker") == "patient"), "")
+        
+        # Only validate if the patient actually said something
+        if last_patient_ans:
+            validation_prompt = (
+                f"Evaluate if the following patient input is a valid medical symptom, health condition, or reason for a clinical visit. "
+                f"Inputs like 'fever', 'chest pain', 'checkup', 'pregnancy', 'hurt my arm' are valid. "
+                f"Inputs like 'to enjoy', 'hello', 'nothing', 'pizza', 'random words' are invalid. "
+                f"Return JSON: {{\"valid\": bool, \"reason\": str}}. Input: '{last_patient_ans}'"
+            )
+            validation = _ask(validation_prompt, {"valid": True}, max_tokens=100)
+            
+            if not validation.get("valid", True):
+                clarification_questions = {
+                    "en": "I didn't quite understand that as a medical issue. Could you please describe your health symptom or reason for visit today?",
+                    "hi": "मैं इसे एक चिकित्सा समस्या के रूप में समझ नहीं पाया। क्या आप कृपया आज अपने स्वास्थ्य लक्षण या आने का कारण बता सकते हैं?",
+                    "bn": "আমি এটি একটি চিকিৎসা সমস্যা হিসেবে বুঝতে পারিনি। আপনি কি দয়া করে আজ আপনার স্বাস্থ্য লক্ষণ বা আসার কারণটি বলতে পারবেন?",
+                    "te": "నేను దీనిని వైద్య సమస్యగా అర్థం చేసుకోలేకపోయాను. దయచేసి ఈరోజు మీ ఆరోగ్య లక్షణాన్ని లేదా రావడానికి గల కారణాన్ని వివరించగలరా?",
+                    "ta": "இதை ஒரு மருத்துவப் பிரச்சனையாக என்னால் புரிந்து கொள்ள முடியவில்லை. இன்று உங்கள் உடல்நல அறிகுறி அல்லது வந்ததற்கான காரணத்தை விவரிக்க முடியுமா?",
+                    "mr": "मला ही वैद्यकीय समस्या म्हणून समजली नाही. कृपया तुम्ही आज तुमचे आरोग्य लक्षण किंवा येण्याचे कारण सांगू शकता का?",
+                    "kn": "ನಾನು ಇದನ್ನು ವೈದ್ಯಕೀಯ ಸಮಸ್ಯೆ ಎಂದು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಇಂದು ನಿಮ್ಮ ಆರೋಗ್ಯ ಲಕ್ಷಣ ಅಥವಾ ಭೇಟಿಗೆ ಕಾರಣವನ್ನು ವಿವರಿಸಬಹುದೇ?"
+                }
+                clarification = clarification_questions.get(language, clarification_questions["en"])
+                return {
+                    "question": clarification,
+                    "chips": [],
+                    "escape_hatch": None,
+                    "input_type": "freetext",
+                    "done": False,
+                    "needs_clarification": True,
+                    "dimension": None
+                }
+
+    # -----------------------------------------------------------------------
     # Deterministic dimension selection + template-first response
     # -----------------------------------------------------------------------
     next_dim = get_next_dimension(transcript, mode)
