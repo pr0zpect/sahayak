@@ -265,6 +265,19 @@ class AbdmAuthView(APIView):
         form = AbdmAuthSerializer(data=request.data)
         form.is_valid(raise_exception=True)
         number = form.validated_data["abha_number"]
+        
+        # Hardcoded mock for Meera Devi demo
+        clean_number = number.replace("-", "").replace(" ", "")
+        if clean_number == "91123456789012":
+            return Response({
+                "status": "authenticated",
+                "abha_number": "91-1234-5678-9012",
+                "abha_id": "MOCK-MEERA-001",
+                "patient_name": "Meera Devi",
+                "language": "hi",  # Hindi fallback for Marathi
+                "txn_id": uuid.uuid4().hex
+            })
+
         return Response({
             "status": "authenticated",
             "abha_number": number,

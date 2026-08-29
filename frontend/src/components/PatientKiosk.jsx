@@ -19,6 +19,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
   const [mode, setMode] = useState('allopathic'); // 'allopathic' or 'ayush'
   const [abhaId, setAbhaId] = useState('');
   const [abhaNumber, setAbhaNumber] = useState('');
+  const [isFetchingAbha, setIsFetchingAbha] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [consentScope, setConsentScope] = useState({
     intake_interview: true,
@@ -139,6 +140,34 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
         console.error('TTS execution error:', err);
       }
     }, 250);
+  };
+
+  const handleFetchAbhaDetails = async () => {
+    if (!abhaNumber.trim()) return;
+    setIsFetchingAbha(true);
+    try {
+      const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+      const res = await fetch(`${BASE_URL}/abdm/authenticate/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ abha_number: abhaNumber.trim() })
+      });
+      if (!res.ok) throw new Error('Fetch failed');
+      const data = await res.json();
+      if (data.patient_name) {
+        setPatientName(data.patient_name);
+        setLanguage(data.language || language);
+        setAbhaId(data.abha_id);
+        setToastMessage(`ABHA Details Fetched: ${data.patient_name}`);
+      } else {
+        setToastMessage('ABHA authenticated, but no demographic data found.');
+      }
+    } catch (err) {
+      console.error(err);
+      setToastMessage('Failed to fetch ABHA details. Please try again.');
+    } finally {
+      setIsFetchingAbha(false);
+    }
   };
 
   const handleStartSession = async (e) => {
@@ -411,7 +440,29 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t('abha_id_optional')}</label>
+            <label className="form-label">
+              {t('abha_id_optional')}
+              {abhaNumber.trim() && (
+                <button 
+                  type="button" 
+                  onClick={handleFetchAbhaDetails} 
+                  disabled={isFetchingAbha}
+                  style={{
+                    marginLeft: '10px', 
+                    fontSize: '0.75rem', 
+                    padding: '2px 8px', 
+                    borderRadius: '4px', 
+                    background: 'var(--primary)', 
+                    color: 'white', 
+                    border: 'none', 
+                    cursor: isFetchingAbha ? 'not-allowed' : 'pointer',
+                    opacity: isFetchingAbha ? 0.7 : 1
+                  }}
+                >
+                  {isFetchingAbha ? 'Fetching...' : 'Fetch Data'}
+                </button>
+              )}
+            </label>
             <input 
               type="text" 
               className="form-input" 
