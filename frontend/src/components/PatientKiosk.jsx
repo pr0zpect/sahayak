@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { startInterview, respondInterview, uploadDocument, generateSummary, pushAbdm, grantConsent } from '../api';
+import { startInterview, respondInterview, uploadDocument, generateSummary, pushAbdm, grantConsent, generateToken } from '../api';
 import { translations } from '../translations';
 import { 
   Mic, MicOff, Send, AlertTriangle, UploadCloud, CheckCircle2, 
@@ -53,6 +53,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
   // Summary & ABDM State
   const [summaryData, setSummaryData] = useState(null);
   const [abdmResult, setAbdmResult] = useState(null);
+  const [tokenData, setTokenData] = useState(null); // { token, counter_number, priority }
   const [toastMessage, setToastMessage] = useState(null);
 
   const chatEndRef = useRef(null);
@@ -224,6 +225,13 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
       const res = await pushAbdm(activeSessionId);
       setAbdmResult(res);
       setToastMessage(`Pushed to ABHA ✓ (${res.abha_id})`);
+      // Auto-generate token + counter after ABDM push
+      try {
+        const tkn = await generateToken(activeSessionId);
+        setTokenData(tkn);
+      } catch (tokenErr) {
+        console.error('Token generation failed:', tokenErr);
+      }
     } catch (err) {
       alert('Failed to push to ABDM.');
     } finally {
@@ -247,6 +255,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
     setInteractionAlerts([]);
     setSummaryData(null);
     setAbdmResult(null);
+    setTokenData(null);
     setToastMessage(null);
   };
 
@@ -729,12 +738,75 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               <ShieldCheck size={20} />
             </button>
           ) : (
-            <div style={{ textAlign: 'center', background: 'var(--success-bg)', border: '1.5px solid var(--success-border)', borderRadius: 'var(--radius-md)', padding: '1.75rem' }}>
-              <CheckCircle2 size={46} color="#10b981" style={{ margin: '0 auto 0.6rem auto' }} />
-              <h4 style={{ color: '#065f46', fontSize: '1.3rem', fontWeight: 800 }}>Pushed to India ABDM Health Network</h4>
-              <p style={{ color: '#047857', fontSize: '0.95rem', marginBottom: '1.25rem', fontWeight: 600 }}>
-                ABHA ID: <strong>{abdmResult.abha_id}</strong>
-              </p>
+            <div style={{ textAlign: 'center' }}>
+              {/* Token + Counter Ticket Card — the most prominent element */}
+              {tokenData && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  borderRadius: '20px',
+                  padding: '2.5rem 2rem',
+                  marginBottom: '1.5rem',
+                  color: '#ffffff',
+                  boxShadow: '0 8px 32px rgba(15, 23, 42, 0.35)',
+                  border: '2px solid rgba(255,255,255,0.1)',
+                }}>
+                  <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '0.5rem', fontWeight: 700 }}>
+                    Your Token Number
+                  </div>
+                  <div style={{
+                    fontSize: '3.5rem',
+                    fontWeight: 900,
+                    letterSpacing: '6px',
+                    color: '#38bdf8',
+                    textShadow: '0 0 20px rgba(56, 189, 248, 0.4)',
+                    marginBottom: '1.25rem',
+                    fontFamily: 'monospace',
+                  }}>
+                    {tokenData.token}
+                  </div>
+                  <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)', margin: '0 auto 1.25rem auto' }} />
+                  <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 700 }}>
+                    Please Proceed To
+                  </div>
+                  <div style={{
+                    fontSize: '2rem',
+                    fontWeight: 900,
+                    color: '#4ade80',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    Counter {tokenData.counter_number}
+                  </div>
+                  {tokenData.priority && (
+                    <div style={{
+                      marginTop: '1rem',
+                      display: 'inline-block',
+                      background: '#dc2626',
+                      color: '#fff',
+                      padding: '0.35rem 1rem',
+                      borderRadius: '999px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      letterSpacing: '1px',
+                      textTransform: 'uppercase',
+                    }}>
+                      ⚠ Priority Patient
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ABDM confirmation */}
+              <div style={{ background: 'var(--success-bg)', border: '1.5px solid var(--success-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                <CheckCircle2 size={28} color="#10b981" style={{ margin: '0 auto 0.4rem auto' }} />
+                <h4 style={{ color: '#065f46', fontSize: '1rem', fontWeight: 800, marginBottom: '0.25rem' }}>Pushed to India ABDM Health Network</h4>
+                <p style={{ color: '#047857', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
+                  ABHA ID: <strong>{abdmResult.abha_id}</strong>
+                </p>
+              </div>
+
               <button type="button" className="btn-primary" onClick={handleResetSession}>
                 Start Next Patient Intake
               </button>

@@ -158,3 +158,13 @@ export const getAdminAnalytics = async (token) => {
   return res.json();
 };
 
+export const generateToken = async (sessionId) => {
+  const res = await fetch(`${BASE_URL}/token/generate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!res.ok) throw new Error('Token generation failed');
+  return res.json();
+};
+

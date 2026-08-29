@@ -40,6 +40,11 @@ class Session(models.Model):
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.IN_PROGRESS)
     red_flag = models.BooleanField(default=False)
     red_flag_reason = models.TextField(null=True, blank=True)
+    red_flag_severity = models.CharField(
+        max_length=20,
+        choices=[("critical", "Critical"), ("moderate", "Moderate")],
+        null=True, blank=True
+    )
     pushed_to_abdm = models.BooleanField(default=False)
 
     # Token & receptionist validation fields
@@ -49,6 +54,7 @@ class Session(models.Model):
     )
     token_generated_at = models.DateTimeField(null=True, blank=True)
     token_expires_at = models.DateTimeField(null=True, blank=True)
+    counter_number = models.PositiveIntegerField(null=True, blank=True)
     needed_clarification = models.BooleanField(default=False)
     rejection_reason = models.CharField(
         max_length=50, choices=REJECTION_REASONS, null=True, blank=True

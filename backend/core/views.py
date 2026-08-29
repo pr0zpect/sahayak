@@ -87,7 +87,11 @@ class InterviewRespondView(APIView):
 
         flag = redflag_rules.check(data["answer"], _history(session))
         if flag["flagged"]:
-            session.red_flag, session.red_flag_reason = True, flag["reason"]
+            session.red_flag = True
+            session.red_flag_reason = flag["reason"]
+            # Set severity — only escalate, never downgrade from critical to moderate
+            if flag.get("severity") == "critical" or session.red_flag_severity != "critical":
+                session.red_flag_severity = flag.get("severity") or "moderate"
 
         next_item = llm.get_next_question(_history(session), mode=session.mode, language=session.patient.language)
 
@@ -302,6 +306,20 @@ def _generate_token_str():
     raise ValueError("Could not generate unique token after 20 attempts")
 
 
+COUNTER_COUNT = 3  # Number of physical hospital counters
+
+
+def _assign_counter():
+    """
+    Simple round-robin counter assignment based on how many tokens have
+    been generated today. Deterministic, no external state needed beyond
+    a count query.
+    """
+    today_token_count = Session.objects.filter(
+        token_generated_at__date=timezone.now().date()
+    ).exclude(token__isnull=True).count()
+    return (today_token_count % COUNTER_COUNT) + 1
+
 class TokenGenerateView(APIView):
     """
     POST /api/token/generate/
@@ -326,20 +344,24 @@ class TokenGenerateView(APIView):
         if session.token:
             return Response({
                 "token": session.token,
+                "counter_number": session.counter_number,
                 "priority": session.red_flag,
                 "expires_at": session.token_expires_at,
             })
 
         now = timezone.now()
         tok = _generate_token_str()
+        counter = _assign_counter()
         session.token = tok
         session.token_status = Session.TokenStatus.PENDING
         session.token_generated_at = now
         session.token_expires_at = now + timezone.timedelta(minutes=15)
-        session.save(update_fields=["token", "token_status", "token_generated_at", "token_expires_at", "updated_at"])
+        session.counter_number = counter
+        session.save(update_fields=["token", "token_status", "token_generated_at", "token_expires_at", "counter_number", "updated_at"])
 
         return Response({
             "token": session.token,
+            "counter_number": session.counter_number,
             "priority": session.red_flag,
             "expires_at": session.token_expires_at,
         })
@@ -377,6 +399,8 @@ class TokenLookupView(APIView):
             "chief_complaint": chief_complaint,
             "priority": session.red_flag,
             "red_flag_reason": session.red_flag_reason or "",
+            "red_flag_severity": session.red_flag_severity or "",
+            "counter_number": session.counter_number,
             "needed_clarification": session.needed_clarification,
             "token_status": session.token_status,
             "expired": expired,
