@@ -37,11 +37,21 @@ class InterviewStartView(APIView):
         form.is_valid(raise_exception=True)
         data = form.validated_data
 
-        patient, _ = Patient.objects.get_or_create(
+        patient, created = Patient.objects.get_or_create(
             name=data["patient_name"],
             language=data["language"],
             defaults={"abha_id": data.get("abha_id"), "abha_number": data.get("abha_number"), "preferred_language": data["language"]}
         )
+        if not created:
+            updated = False
+            if data.get("abha_id"):
+                patient.abha_id = data.get("abha_id")
+                updated = True
+            if data.get("abha_number"):
+                patient.abha_number = data.get("abha_number")
+                updated = True
+            if updated:
+                patient.save(update_fields=["abha_id", "abha_number"])
 
         session = Session.objects.create(patient=patient, mode=data.get("mode", "allopathic"))
         question = llm.get_first_question(mode=session.mode, language=session.patient.language)
@@ -178,7 +188,10 @@ class SummaryGenerateView(APIView):
         documents = [{"id": d.id, "fields": d.extracted_fields, "text": d.extracted_text} for d in session.documents.all()]
         
         # Inject mock ABDM PHR data for Meera Devi demo
-        if session.patient.abha_id == "MOCK-MEERA-001":
+        abha = session.patient.abha_number or ""
+        abha_clean = abha.replace("-", "").replace(" ", "")
+        
+        if session.patient.abha_id == "MOCK-MEERA-001" or abha_clean == "91123456789012":
             documents.append({
                 "id": "ABDM-PHR-RECORD",
                 "text": (
