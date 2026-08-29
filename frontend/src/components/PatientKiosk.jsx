@@ -388,7 +388,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#2563eb' }} 
             />
             <label htmlFor="consent-check" style={{ cursor: 'pointer', fontSize: '0.92rem', color: '#0f172a', fontWeight: 600 }}>
-              I agree to the DPDP Act 2023 data processing scope
+              {t('agree_dpdp')}
             </label>
           </div>
 
@@ -398,7 +398,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
             disabled={!patientName.trim() || !consentGiven || isLoading}
             style={{ background: mode === 'ayush' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : undefined }}
           >
-            {isLoading ? 'Initializing Session...' : `Begin ${mode === 'ayush' ? 'AYUSH' : 'Allopathic'} Intake`}
+            {isLoading ? t('initializing_session') : (mode === 'ayush' ? t('begin_intake_ayush') : t('begin_intake_allopathic'))}
             <ArrowRight size={18} />
           </button>
         </form>
@@ -573,7 +573,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               {isUploading ? t('upload_scanning') : t('upload_click')}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-              Supports camera snapshots, PNG, or JPG images
+              {t('upload_formats')}
             </div>
           </label>
 
@@ -734,7 +734,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               disabled={isLoading}
               style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
             >
-              {isLoading ? 'Building FHIR R4 Bundle & Pushing...' : 'Push FHIR R4 Bundle to ABDM Network'}
+              {isLoading ? t('pushing') : t('push_to_doctor')}
               <ShieldCheck size={20} />
             </button>
           ) : (
@@ -751,7 +751,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                   border: '2px solid rgba(255,255,255,0.1)',
                 }}>
                   <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '0.5rem', fontWeight: 700 }}>
-                    Your Token Number
+                    {t('your_token')}
                   </div>
                   <div style={{
                     fontSize: '3.5rem',
@@ -766,7 +766,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                   </div>
                   <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)', margin: '0 auto 1.25rem auto' }} />
                   <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 700 }}>
-                    Please Proceed To
+                    {t('please_proceed')}
                   </div>
                   <div style={{
                     fontSize: '2rem',
@@ -792,7 +792,7 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
                       letterSpacing: '1px',
                       textTransform: 'uppercase',
                     }}>
-                      ⚠ Priority Patient
+                      ⚠ {t('priority_patient')}
                     </div>
                   )}
                 </div>
@@ -801,14 +801,14 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
               {/* ABDM confirmation */}
               <div style={{ background: 'var(--success-bg)', border: '1.5px solid var(--success-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem', marginBottom: '1.25rem' }}>
                 <CheckCircle2 size={28} color="#10b981" style={{ margin: '0 auto 0.4rem auto' }} />
-                <h4 style={{ color: '#065f46', fontSize: '1rem', fontWeight: 800, marginBottom: '0.25rem' }}>Pushed to India ABDM Health Network</h4>
+                <h4 style={{ color: '#065f46', fontSize: '1rem', fontWeight: 800, marginBottom: '0.25rem' }}>{t('pushed_abdm_desc')}</h4>
                 <p style={{ color: '#047857', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
                   ABHA ID: <strong>{abdmResult.abha_id}</strong>
                 </p>
               </div>
 
               <button type="button" className="btn-primary" onClick={handleResetSession}>
-                Start Next Patient Intake
+                {t('start_next')}
               </button>
             </div>
           )}
