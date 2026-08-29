@@ -86,10 +86,46 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
 
   const speakText = (text) => {
     if (!ttsEnabled || !('speechSynthesis' in window) || !text) return;
+    
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === 'hi' ? 'hi-IN' : 'en-US';
-    window.speechSynthesis.speak(utterance);
+    
+    // A small timeout allows the browser audio queue to clear and prevent cracking/stuttering
+    setTimeout(() => {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        const langMapping = {
+          en: 'en-US',
+          hi: 'hi-IN',
+          ta: 'ta-IN',
+          te: 'te-IN',
+          kn: 'kn-IN',
+          bn: 'bn-IN',
+          mr: 'mr-IN',
+        };
+        
+        const targetLang = langMapping[language] || 'en-US';
+        utterance.lang = targetLang;
+        
+        // Find best voice match for selected language
+        if (window.speechSynthesis.getVoices) {
+          const voices = window.speechSynthesis.getVoices();
+          const matchingVoice = voices.find(v => 
+            v.lang.replace('_', '-').toLowerCase().startsWith(targetLang.toLowerCase())
+          );
+          if (matchingVoice) {
+            utterance.voice = matchingVoice;
+          }
+        }
+        
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('TTS execution error:', err);
+      }
+    }, 150);
   };
 
   const handleStartSession = async (e) => {
