@@ -176,6 +176,23 @@ class SummaryGenerateView(APIView):
             return Response({"detail": "Session not found."}, status=404)
 
         documents = [{"id": d.id, "fields": d.extracted_fields, "text": d.extracted_text} for d in session.documents.all()]
+        
+        # Inject mock ABDM PHR data for Meera Devi demo
+        if session.patient.abha_id == "MOCK-MEERA-001":
+            documents.append({
+                "id": "ABDM-PHR-RECORD",
+                "text": (
+                    "ABDM Personal Health Record: \n"
+                    "PMH: Type 2 Diabetes Mellitus (diagnosed ~5 years ago), Hypertension (High BP, diagnosed ~3 years ago). "
+                    "Current Medications: Metformin 500mg twice daily, Enalapril 5mg once daily. "
+                    "Drug Allergy: Penicillin (develops skin rash). "
+                    "Family History: Father had a heart attack at age 60, Mother has Type 2 Diabetes. "
+                    "Personal/Lifestyle History: Vegetarian, moderately oily/spicy home-cooked food. Sedentary most of the day; no regular exercise. "
+                    "Sleeps ~6 hours a night, occasionally disturbed. Never smoked, does not drink. Moderate stress (financial worry, caring for grandchildren)."
+                ),
+                "fields": {}
+            })
+            
         structured = llm.generate_summary(_history(session), documents, mode=session.mode)
 
         Summary.objects.update_or_create(session=session, defaults={"structured_json": structured})
