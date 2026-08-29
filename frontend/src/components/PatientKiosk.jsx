@@ -89,10 +89,13 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
     
     window.speechSynthesis.cancel();
     
-    // A small timeout allows the browser audio queue to clear and prevent cracking/stuttering
+    // A timeout allows the browser audio queue to clear and prevent stuttering
     setTimeout(() => {
       try {
         const utterance = new SpeechSynthesisUtterance(text);
+        
+        // CRITICAL FIX: Bind utterance to window to prevent garbage collection mid-speech (macOS/Chrome bug)
+        window.currentUtterance = utterance;
         
         const langMapping = {
           en: 'en-US',
@@ -107,25 +110,35 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
         const targetLang = langMapping[language] || 'en-US';
         utterance.lang = targetLang;
         
-        // Find best voice match for selected language
+        // Find best voice match for selected language, preferring premium 'Google' voices if available
         if (window.speechSynthesis.getVoices) {
           const voices = window.speechSynthesis.getVoices();
-          const matchingVoice = voices.find(v => 
+          const googleVoice = voices.find(v => 
+            v.lang.replace('_', '-').toLowerCase().startsWith(targetLang.toLowerCase()) && 
+            v.name.includes('Google')
+          );
+          const fallbackVoice = voices.find(v => 
             v.lang.replace('_', '-').toLowerCase().startsWith(targetLang.toLowerCase())
           );
-          if (matchingVoice) {
-            utterance.voice = matchingVoice;
+          
+          if (googleVoice) {
+            utterance.voice = googleVoice;
+          } else if (fallbackVoice) {
+            utterance.voice = fallbackVoice;
           }
         }
         
-        utterance.rate = 0.95;
+        utterance.rate = 0.9;
         utterance.pitch = 1.0;
+        
+        utterance.onend = () => { window.currentUtterance = null; };
+        utterance.onerror = () => { window.currentUtterance = null; };
         
         window.speechSynthesis.speak(utterance);
       } catch (err) {
         console.error('TTS execution error:', err);
       }
-    }, 150);
+    }, 250);
   };
 
   const handleStartSession = async (e) => {
