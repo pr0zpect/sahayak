@@ -214,8 +214,16 @@ def get_first_question(mode="allopathic", language="en"):
 def get_next_question(transcript, mode="allopathic", language="en"):
     patient_answers = sum(1 for item in transcript if item.get("speaker") == "patient")
     asked_questions = [t.get("text", "").strip().lower() for t in transcript if t.get("speaker") == "ai"]
-    
-    closing_question = "Is there anything else you'd like to add?"
+    closing_questions = {
+        "en": "Is there anything else you'd like to add?",
+        "hi": "क्या आप कुछ और बताना चाहेंगे?",
+        "bn": "আপনি কি আর কিছু যোগ করতে চান?",
+        "te": "మీరు ఇంకేమైనా చెప్పాలనుకుంటున్నారా?",
+        "ta": "நீங்கள் வேறு ஏதேனும் சேர்க்க விரும்புகிறீர்களா?",
+        "mr": "तुम्हाला आणखी काही सांगायचे आहे का?",
+        "kn": "ನೀವು ಬೇರೆ ಏನಾದರೂ ಸೇರಿಸಲು ಬಯಸುವಿರಾ?"
+    }
+    closing_question = closing_questions.get(language, closing_questions["en"])
     
     # If the last question asked was the closing question, the patient has now answered it, so we are done.
     if asked_questions and asked_questions[-1] == closing_question.lower():
@@ -255,14 +263,32 @@ def get_next_question(transcript, mode="allopathic", language="en"):
             "needs_clarification": False
         }
 
-    # Check for a pre-built template — if found, return instantly (zero LLM call)
+    # Check for a pre-built template — if found, use it (and translate if needed)
     template = DIMENSION_FALLBACKS.get(next_dim)
     if template:
         sel_mode = "multi" if next_dim in MULTI_SELECT_DIMENSIONS else "single"
-        return {
+        res = {
             "question": template["question"],
             "chips": template["chips"],
             "escape_hatch": "Something else / not sure",
+            "input_type": "options",
+            "done": False,
+            "needs_clarification": False,
+            "dimension": next_dim,
+            "selection_mode": sel_mode,
+        }
+        
+        if language == "en":
+            return res
+            
+        # For non-English, strictly translate the JSON template values
+        prompt = f"Translate the following JSON object's values into language code '{language}'. DO NOT change the JSON keys. JSON: {json.dumps(res)}"
+        translated = _ask(prompt, fallback=res, language=language, max_tokens=200)
+        
+        return {
+            "question": translated.get("question", res["question"]),
+            "chips": translated.get("chips", res["chips"]),
+            "escape_hatch": translated.get("escape_hatch", res["escape_hatch"]),
             "input_type": "options",
             "done": False,
             "needs_clarification": False,
