@@ -1,3 +1,6 @@
+"""
+API View Controllers for Sahayak OPD Pre-Consultation Backend.
+"""
 import random
 import string
 import threading

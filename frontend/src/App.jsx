@@ -107,9 +107,9 @@ export default function App() {
   if (view === 'kiosk') {
     return (
       <div>
-        <div style={{ background: '#0f172a', padding: '10px 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', color: '#fff' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', animation: 'pulse 2s infinite' }}></span>
+        <div style={{ background: '#0f172a', padding: '8px 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', color: '#fff' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px rgba(16, 185, 129, 0.6)' }}></span>
             Sahayak Kiosk Mode Active
           </span>
           <button 
@@ -119,24 +119,24 @@ export default function App() {
               setPasswordInput('');
               setPasswordError('');
             }} 
-            style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}
-            onMouseOver={e => e.target.style.background = '#b91c1c'}
-            onMouseOut={e => e.target.style.background = '#dc2626'}
+            style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '5px 14px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}
+            onMouseOver={e => { e.target.style.background = '#ef4444'; e.target.style.color = '#ffffff'; }}
+            onMouseOut={e => { e.target.style.background = 'rgba(239, 68, 68, 0.15)'; e.target.style.color = '#fca5a5'; }}
           >
             Exit Patient Portal
           </button>
         </div>
-        <header className="app-header">
+        <header className="app-header" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
           <div className="brand-container">
-            <div className="brand-logo"><HeartPulse size={24} color="#fff" /></div>
+            <div className="brand-logo" style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', borderRadius: '12px' }}><HeartPulse size={24} color="#fff" /></div>
             <div>
-              <div className="brand-title">Sahayak</div>
-              <div className="brand-subtitle">Smart OPD Pre-Consultation Platform</div>
+              <div className="brand-title" style={{ color: '#0f172a', fontWeight: 900 }}>Sahayak</div>
+              <div className="brand-subtitle" style={{ color: '#2563eb', fontWeight: 700 }}>Smart OPD Pre-Consultation Platform</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '4px 12px', borderRadius: '20px', fontWeight: 700 }}>
-              <ShieldCheck size={14} color="#10b981" /><span>ABDM Connected</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '5px 14px', borderRadius: '20px', fontWeight: 700 }}>
+              <ShieldCheck size={14} color="#166534" /><span>ABDM Connected</span>
             </div>
           </div>
         </header>

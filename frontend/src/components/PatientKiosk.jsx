@@ -56,6 +56,16 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
 
+  // Pre-fetch Web Speech API voices on component load to avoid missing voice stutter
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      }
+    }
+  }, []);
+
   // Spoken Assistant Guidance for Screen Transitions
   useEffect(() => {
     if (!ttsEnabled) return;
@@ -114,21 +124,42 @@ export default function PatientKiosk({ activeSessionId, setActiveSessionId, onSe
 
   const speakText = (text) => {
     if (!ttsEnabled || !('speechSynthesis' in window) || !text) return;
+    
+    // Stop any ongoing speech cleanly
     window.speechSynthesis.cancel();
     
-    setTimeout(() => {
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        const langMapping = {
-          en: 'en-US', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN', kn: 'kn-IN', bn: 'bn-IN', mr: 'mr-IN',
-        };
-        utterance.lang = langMapping[language] || 'en-US';
-        utterance.rate = 0.9;
-        window.speechSynthesis.speak(utterance);
-      } catch (err) {
-        console.error('TTS error:', err);
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      const langMapping = {
+        en: 'en-US', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN', kn: 'kn-IN', bn: 'bn-IN', mr: 'mr-IN',
+      };
+      const targetLang = langMapping[language] || 'en-US';
+      utterance.lang = targetLang;
+
+      // Select best matching voice available in browser
+      if (window.speechSynthesis.getVoices) {
+        const voices = window.speechSynthesis.getVoices();
+        const match = voices.find(v => v.lang.replace('_', '-').toLowerCase() === targetLang.toLowerCase()) ||
+                      voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(targetLang.slice(0, 2).toLowerCase()));
+        if (match) utterance.voice = match;
       }
-    }, 150);
+      
+      utterance.rate = speechRate || 0.9;
+      utterance.pitch = 1.0;
+      
+      // Prevent garbage collection bug in Chrome/Safari by holding reference
+      window.currentUtterance = utterance;
+      utterance.onend = () => { window.currentUtterance = null; };
+      utterance.onerror = () => { window.currentUtterance = null; };
+      
+      // Delay speech slightly to allow cancellation of previous speech to complete
+      setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+      }, 50);
+    } catch (err) {
+      console.error('TTS execution error:', err);
+    }
   };
 
   // Step 3: ABHA Identification Submission
